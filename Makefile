@@ -1,0 +1,11 @@
+.PHONY: test lint tidy
+
+test:
+	go test ./... -race -cover
+
+lint:
+	gofmt -l .
+	go vet ./...
+
+tidy:
+	go mod tidy

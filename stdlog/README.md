@@ -1,0 +1,44 @@
+# Package `stdlog`
+
+`stdlog` provides context-aware structured logging built on Go's standard library `log/slog`.
+
+## Features
+
+- **Interface-Driven & Function-File Layout**: Exposes `stdlog.Logger` interface with dedicated function files (`spec.go`, `new.go`, `option.go`, `method.go`, `with.go`, `level.go`, `redact.go`, `mock_logger.go`).
+- **Standard Library Powered**: Zero external logging dependencies; leverages modern `log/slog` (Go 1.21+).
+- **Sensitive Field Redaction**: Automatically scrubs credentials, tokens, passwords, and DSNs from log records (`password`, `token`, `secret`, `authorization`, `dsn`, `api_key`).
+- **Context-Aware**: Automatically extracts `request_id`, `trace_id`, and `correlation_id` from `context.Context` when logging.
+- **Classification Mapping**: `LevelFor(err error)` maps `stderr.Code` classes to `slog.LevelError`, `slog.LevelWarn`, or `slog.LevelInfo`.
+- **Downstream Unit Testing**: `stdlogmock.Logger` powered by `testify/mock`.
+
+## Usage
+
+```go
+package main
+
+import (
+    "context"
+    "github.com/baby-hero-404/gocore/stdlog"
+)
+
+func main() {
+    // Package-level logging
+    stdlog.Info("server starting", "port", 8080)
+
+    // Contextual logging with automatic request ID extraction
+    ctx := context.WithValue(context.Background(), "request_id", "req-xyz-123")
+    stdlog.WithContext(ctx).Info("order created", "order_id", "ord-99")
+
+    // Automatic credential redaction
+    stdlog.Info("connecting to db", "password", "supersecret") // password is logged as [REDACTED]
+}
+```
+
+## Unit Testing in Downstream Services
+
+```go
+func TestHandler(t *testing.T) {
+    mockLog := stdlogmock.NewLogger(t)
+    mockLog.On("Info", "user registered", mock.Anything).Return()
+}
+```

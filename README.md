@@ -1,0 +1,131 @@
+# gocore
+
+Backend Foundation Toolkit (Microservice Chassis) for Go. Import it to get standardized error
+handling, API responses, logging/monitoring, pre-wired infra clients (Postgres, Redis, Kafka)
+with built-in resiliency, and standardized auth (JWT/OAuth2/Firebase/Casbin) — so a new Go
+service can be bootstrapped in minutes.
+
+See `docs/openspecs/gocore-foundation/` for the full design: `proposal.md` (why/decisions),
+`design.md` (architecture), `specs.md` (expected behavior), `tasks.md` (implementation map).
+
+Requires **Go 1.27+**.
+
+## Core Architecture Principles
+
+1. **Standard Library First**: Modern Go standards (`log/slog`, `context`, `errors`).
+2. **Interface-Driven & Function-File Standard**: Every package is decomposed into single-responsibility function files (`spec.go`, `new.go`, `option.go`, single method files, and `mock_*.go`).
+3. **Downstream Testability**: First-class mocks provided out of the box (powered by `testify/mock`) allowing downstream microservices (e.g. `kdc_bike_BE`) to unit-test all business logic with zero real infrastructure dependencies.
+4. **Resiliency & Zero Bloat**: Built-in connection pooling, exponential backoff retries, sensitive field redaction, and panic-recovery middleware.
+
+## Package Layout Rules
+
+- **Core packages** (`stdres`, `iam`, `monitor`, ...) depend only on the standard library, `stderr`/`stdlog` and their one essential library. They never import a web framework.
+- **Adapters and heavy vendor integrations** live in a sub-package named after what they adapt: `stdres/stdgin`, `iam/iamgin`, `iam/firebase`, `monitor/sentry`, ...
+- **Mocks** live in `<pkg>/<pkg>mock` (e.g. `cache/cachemock`) so `testify` never enters a production build.
+- Constructors: `New(cfg Config, opts ...Option)` for a package's main type (`New(ctx, ...)` only when it does I/O on construction); `NewX` when a package has several types.
+
+These rules are enforced by `arch_test.go`.
+
+## Package Index
+
+| Package | Purpose | Architecture Pattern | Status |
+|---|---|---|---|
+| `stderr` | Typed error codes, field validation & i18n | `spec.go`, `error.go`, `code.go`, `mock_error.go` | Ready |
+| `stdlog` | Context-aware structured logging (`log/slog`) | `spec.go`, `new.go`, `option.go`, `method.go`, `with.go`, `mock_logger.go` | Ready |
+| `stdres` | API response envelope & validation mappers (net/http core) | `translator.go`, `response.go`, `http.go`, `validation.go`, `mock_translator.go` | Ready |
+| `stdres/stdgin` | Gin adapter for `stdres` | `gin.go` | Ready |
+| `env` | Config loading (viper + fail-fast validation) | `spec.go`, `new.go`, `option.go`, `validate.go`, `dotenv.go` | Ready |
+| `database` | Postgres/GORM wrapper with pooling & retries | `spec.go`, `new.go`, `option.go`, `ping.go`, `close.go`, `mock_database.go` | Ready |
+| `cache` | Redis wrapper with timeouts & error mapping | `spec.go`, `new.go`, `option.go`, `get.go`, `set.go`, `del.go`, `mock_cache.go` | Ready |
+| `lock` | Distributed lock (Redis Redlock via redsync) | `spec.go`, `new.go`, `option.go`, `acquire.go`, `release.go`, `mock_lock.go` | Ready |
+| `queue/kafka/producer` | Kafka producer (JSON, batching, durability) | `spec.go`, `new.go`, `option.go`, `publish.go`, `close.go`, `mock.go` | Ready |
+| `queue/kafka/consumer` | Kafka consumer group (handler-driven) | `spec.go`, `new.go`, `option.go`, `fetch.go`, `subscribe.go`, `mock.go` | Ready |
+| `httpserver` | Gin wrapper with recovery, CORS & tracing | `spec.go`, `new.go`, `option.go`, `start.go`, `shutdown.go`, `mock_server.go` | Ready |
+| `iam` | Identity, JWT & OAuth2 validators, Casbin authorization (framework-free) | `spec.go`, `identity.go`, `jwt.go`, `oauth2.go`, `bearer.go`, `authorize.go` | Ready |
+| `iam/iamgin` | Gin JWT & Casbin middleware | `iamgin.go` | Ready |
+| `iam/firebase` | Firebase ID token validator | `firebase.go` | Ready |
+| `monitor` | Metrics/error-tracking interfaces | `spec.go` | Ready |
+| `monitor/prom`, `monitor/promgin` | Prometheus recorder; Gin middleware & `/metrics` handler | `prom.go`, `promgin.go` | Ready |
+| `monitor/sentry`, `monitor/graylog` | Sentry error reporting; Graylog GELF writer | `sentry.go`, `graylog.go` | Ready |
+
+## Quickstart
+
+Bootstrap a production-ready microservice in under 3 minutes:
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/baby-hero-404/gocore/database"
+	"github.com/baby-hero-404/gocore/env"
+	"github.com/baby-hero-404/gocore/httpserver"
+	"github.com/baby-hero-404/gocore/monitor/prom"
+	"github.com/baby-hero-404/gocore/monitor/promgin"
+	"github.com/baby-hero-404/gocore/stdlog"
+	"github.com/baby-hero-404/gocore/stdres/stdgin"
+	"github.com/gin-gonic/gin"
+)
+
+type AppConfig struct {
+	Server   httpserver.Config `mapstructure:"server"`
+	Database database.Config   `mapstructure:"database"`
+}
+
+func main() {
+	var cfg AppConfig
+	if err := env.Load("APP", &cfg); err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	stdlog.Info("Starting service...")
+
+	// Connect Database (implements database.Database interface)
+	db, err := database.New(context.Background(), cfg.Database)
+	if err != nil {
+		log.Fatalf("Database connection error: %v", err)
+	}
+	defer db.Close()
+
+	// Initialize HTTP Server (implements httpserver.Server interface)
+	srv := httpserver.New(cfg.Server)
+	srv.Engine().Use(promgin.Middleware(prom.NewRecorder(nil)))
+	srv.Engine().GET("/metrics", promgin.Handler())
+
+	srv.Engine().GET("/health", func(c *gin.Context) {
+		if err := db.Ping(c.Request.Context()); err != nil {
+			stdgin.Error(c, err)
+			return
+		}
+		stdgin.OK(c, map[string]string{"status": "healthy"})
+	})
+
+	_ = srv.Start()
+}
+```
+
+## Unit Testing Downstream Services
+
+When building microservices that import `gocore`, unit-test handlers and business logic without spinning up external dependencies:
+
+```go
+func TestOrderHandler(t *testing.T) {
+    mockDB := databasemock.NewDatabase(t)
+    mockCache := cachemock.NewCache(t)
+    mockProducer := producermock.NewProducer()
+
+    mockDB.On("Ping", mock.Anything).Return(nil)
+    mockCache.On("Get", mock.Anything, "order:1").Return(`{"id": 1}`, nil)
+    // Run business logic assertions against mocks
+}
+```
+
+## Development Commands
+
+```bash
+make test  # Runs all tests with race detector and coverage
+make lint  # Formats and validates with gofmt and go vet
+make tidy  # Cleans up and verifies module dependencies
+```
