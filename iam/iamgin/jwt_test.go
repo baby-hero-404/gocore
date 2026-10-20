@@ -3,6 +3,7 @@ package iamgin
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -55,5 +56,72 @@ func TestJWTMiddleware(t *testing.T) {
 	}
 	if w2.Body.String() != "user-abc" {
 		t.Errorf("expected body user-abc, got %s", w2.Body.String())
+	}
+}
+
+func TestJWTMiddleware_WithCookie(t *testing.T) {
+	secret := "jwt-cookie-secret"
+	validator := iam.NewJWTValidator(iam.JWTConfig{Secret: secret})
+
+	engine := gin.New()
+	engine.Use(JWTMiddleware(validator, WithCookie("session")))
+	engine.GET("/protected", func(c *gin.Context) {
+		id, _ := IdentityFromGin(c)
+		c.String(http.StatusOK, id.ID)
+	})
+
+	cookieToken := generateTestToken(secret, "from-cookie", "", nil, time.Hour)
+	headerToken := generateTestToken(secret, "from-header", "", nil, time.Hour)
+
+	tests := []struct {
+		name     string
+		cookie   string
+		header   string
+		wantCode int
+		wantBody string
+	}{
+		{"cookie only", cookieToken, "", http.StatusOK, "from-cookie"},
+		{"cookie takes precedence over header", cookieToken, "Bearer " + headerToken, http.StatusOK, "from-cookie"},
+		{"falls back to header when cookie absent", "", "Bearer " + headerToken, http.StatusOK, "from-header"},
+		{"invalid cookie token rejected", "not-a-jwt", "", http.StatusUnauthorized, ""},
+		{"neither cookie nor header", "", "", http.StatusUnauthorized, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+			if tt.cookie != "" {
+				req.AddCookie(&http.Cookie{Name: "session", Value: tt.cookie})
+			}
+			if tt.header != "" {
+				req.Header.Set("Authorization", tt.header)
+			}
+			engine.ServeHTTP(w, req)
+			if w.Code != tt.wantCode {
+				t.Fatalf("status = %d, want %d", w.Code, tt.wantCode)
+			}
+			if tt.wantBody != "" && w.Body.String() != tt.wantBody {
+				t.Errorf("body = %q, want %q", w.Body.String(), tt.wantBody)
+			}
+		})
+	}
+}
+
+func TestJWTMiddleware_UnauthenticatedCarriesKey(t *testing.T) {
+	engine := gin.New()
+	engine.Use(JWTMiddleware(iam.NewJWTValidator(iam.JWTConfig{Secret: "s"}), WithCookie("session")))
+	engine.GET("/p", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+	for name, setup := range map[string]func(*http.Request){
+		"no credentials": func(*http.Request) {},
+		"bad cookie":     func(r *http.Request) { r.AddCookie(&http.Cookie{Name: "session", Value: "junk"}) },
+		"bad bearer":     func(r *http.Request) { r.Header.Set("Authorization", "Bearer junk") },
+	} {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/p", nil)
+		setup(req)
+		engine.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized || !strings.Contains(w.Body.String(), `"key":"`+iam.KeyUnauthenticated+`"`) {
+			t.Errorf("%s: status=%d body=%s", name, w.Code, w.Body.String())
+		}
 	}
 }

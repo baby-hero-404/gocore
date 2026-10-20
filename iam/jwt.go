@@ -50,13 +50,13 @@ func NewJWTValidator(cfg JWTConfig) *JWTValidator {
 // Validate parses and validates a raw JWT string into an Identity.
 func (v *JWTValidator) Validate(ctx context.Context, tokenStr string) (Identity, error) {
 	if strings.TrimSpace(tokenStr) == "" {
-		return Identity{}, stderr.NewUnauthorized("missing authentication token")
+		return Identity{}, stderr.NewUnauthorized("missing authentication token").WithKey(KeyUnauthenticated)
 	}
 
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, v.keyFunc)
 	if err != nil || !token.Valid {
-		return Identity{}, stderr.Wrap(stderr.CodeUnauthorized, err, "invalid or expired token")
+		return Identity{}, stderr.Wrap(stderr.CodeUnauthorized, err, "invalid or expired token").WithKey(KeyUnauthenticated)
 	}
 
 	// Extract standard claims

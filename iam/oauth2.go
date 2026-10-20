@@ -51,7 +51,7 @@ func NewOAuth2Validator(cfg OAuth2Config, client ...*http.Client) *OAuth2Validat
 // Validate calls the userinfo endpoint with the bearer token and parses identity.
 func (v *OAuth2Validator) Validate(ctx context.Context, token string) (Identity, error) {
 	if strings.TrimSpace(token) == "" {
-		return Identity{}, stderr.NewUnauthorized("missing bearer token")
+		return Identity{}, stderr.NewUnauthorized("missing bearer token").WithKey(KeyUnauthenticated)
 	}
 	if v.cfg.UserInfoURL == "" {
 		return Identity{}, stderr.NewInternal("oauth2 user_info_url is not configured")
@@ -70,7 +70,7 @@ func (v *OAuth2Validator) Validate(ctx context.Context, token string) (Identity,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Identity{}, stderr.NewUnauthorized(fmt.Sprintf("oauth2 token rejected: status %d", resp.StatusCode))
+		return Identity{}, stderr.NewUnauthorized(fmt.Sprintf("oauth2 token rejected: status %d", resp.StatusCode)).WithKey(KeyUnauthenticated)
 	}
 
 	var payload map[string]any

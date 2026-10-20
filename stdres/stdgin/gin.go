@@ -2,6 +2,7 @@
 package stdgin
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/baby-hero-404/gocore/stderr"
@@ -10,17 +11,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// requestContext returns the request's context, or Background for a bare gin context (tests,
+// handlers invoked without a request).
+func requestContext(c *gin.Context) context.Context {
+	if c == nil || c.Request == nil {
+		return context.Background()
+	}
+	return c.Request.Context()
+}
+
 // OK responds with HTTP 200 and standard success envelope.
 func OK(c *gin.Context, data any) {
-	c.JSON(http.StatusOK, stdres.Success(data))
+	c.JSON(http.StatusOK, stdres.SuccessCtx(requestContext(c), data))
 }
 
 // Created responds with HTTP 201 and created envelope.
 func Created(c *gin.Context, data any) {
 	c.JSON(http.StatusCreated, stdres.Envelope{
-		Code:    int(stderr.CodeOK),
-		Message: "created",
-		Data:    data,
+		Code:      int(stderr.CodeOK),
+		Message:   "created",
+		Data:      data,
+		RequestID: stdres.SuccessCtx(requestContext(c), nil).RequestID,
 	})
 }
 
@@ -36,11 +47,8 @@ func JSON(c *gin.Context, status int, data any) {
 		c.JSON(status, env)
 		return
 	}
-	c.JSON(status, stdres.Envelope{
-		Code:    int(stderr.CodeOK),
-		Message: "success",
-		Data:    data,
-	})
+	env := stdres.SuccessCtx(requestContext(c), data)
+	c.JSON(status, env)
 }
 
 // Error responds with a standardized error envelope and aborts the Gin context.

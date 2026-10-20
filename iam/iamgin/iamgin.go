@@ -23,11 +23,17 @@ func IdentityFromGin(c *gin.Context) (iam.Identity, bool) {
 	return iam.IdentityFromContext(c.Request.Context())
 }
 
-// JWTMiddleware extracts the Bearer token, validates it, and injects Identity into the context.
-// Rejects unauthenticated requests with HTTP 401 using stdgin.Error.
-func JWTMiddleware(validator iam.TokenValidator) gin.HandlerFunc {
+// JWTMiddleware extracts the token, validates it, and injects Identity into the context.
+// By default the token comes from the "Authorization: Bearer" header; WithCookie makes the
+// named cookie take precedence. Rejects unauthenticated requests with HTTP 401 using stdgin.Error.
+func JWTMiddleware(validator iam.TokenValidator, opts ...Option) gin.HandlerFunc {
+	o := options{}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	return func(c *gin.Context) {
-		token, err := iam.BearerToken(c.GetHeader("Authorization"))
+		token, err := extractToken(c, o)
 		if err != nil {
 			stdgin.Error(c, err)
 			return
@@ -45,6 +51,16 @@ func JWTMiddleware(validator iam.TokenValidator) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// extractToken reads the token from the configured cookie, falling back to the Bearer header.
+func extractToken(c *gin.Context, o options) (string, error) {
+	if o.cookieName != "" {
+		if v, err := c.Cookie(o.cookieName); err == nil && v != "" {
+			return v, nil
+		}
+	}
+	return iam.BearerToken(c.GetHeader("Authorization"))
 }
 
 // CasbinResolver allows customizing how sub, obj, and act are resolved from a request.
@@ -71,7 +87,7 @@ func CasbinMiddleware(enforcer iam.Enforcer, resolver ...CasbinResolver) gin.Han
 
 		identity, ok := IdentityFromGin(c)
 		if !ok {
-			stdgin.Error(c, stderr.NewUnauthorized("unauthenticated request"))
+			stdgin.Error(c, stderr.NewUnauthorized("unauthenticated request").WithKey(iam.KeyUnauthenticated))
 			return
 		}
 

@@ -29,6 +29,14 @@ func Success(data any) Envelope {
 	}
 }
 
+// SuccessCtx is Success plus the request ID found in ctx, so success responses carry the same
+// trace id as error responses and the X-Request-ID header.
+func SuccessCtx(ctx context.Context, data any) Envelope {
+	env := Success(data)
+	env.RequestID = requestIDFromContext(ctx)
+	return env
+}
+
 // FromError transforms any error into a standardized Envelope and corresponding HTTP status code.
 // If err is a *stderr.Error, its code, status, message, and details are extracted.
 // If a translator is available (via parameter or ctx), error message keys are translated.

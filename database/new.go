@@ -3,6 +3,9 @@ package database
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -128,7 +131,9 @@ func (i *impl) NewDb(ctx context.Context) *gorm.DB {
 	})
 }
 
-func resolveLogger(level string) gormlogger.Interface {
+func resolveLogger(level string) gormlogger.Interface { return resolveLoggerTo(os.Stdout, level) }
+
+func resolveLoggerTo(w io.Writer, level string) gormlogger.Interface {
 	var gormLevel gormlogger.LogLevel
 	switch strings.ToLower(level) {
 	case "silent":
@@ -141,5 +146,12 @@ func resolveLogger(level string) gormlogger.Interface {
 		gormLevel = gormlogger.Error
 	}
 
-	return gormlogger.Default.LogMode(gormLevel)
+	// ErrRecordNotFound is normal control flow (First / lookups), not a warning; colour codes
+	// would pollute log files.
+	return gormlogger.New(log.New(w, "", log.LstdFlags), gormlogger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  gormLevel,
+		IgnoreRecordNotFoundError: true,
+		Colorful:                  false,
+	})
 }

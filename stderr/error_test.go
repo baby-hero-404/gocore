@@ -20,6 +20,7 @@ func TestCode_HTTPStatus(t *testing.T) {
 		{"BadRequest", CodeBadRequest, http.StatusBadRequest},
 		{"Unauthorized", CodeUnauthorized, http.StatusUnauthorized},
 		{"Forbidden", CodeForbidden, http.StatusForbidden},
+		{"TooManyRequests", CodeTooManyRequests, http.StatusTooManyRequests},
 		{"NotFound", CodeNotFound, http.StatusNotFound},
 		{"Conflict", CodeConflict, http.StatusConflict},
 		{"AlreadyExists", CodeAlreadyExists, http.StatusConflict},

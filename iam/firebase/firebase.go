@@ -28,7 +28,7 @@ func NewFirebaseValidator(client FirebaseAuthClient) *FirebaseValidator {
 // Validate verifies the Firebase ID token and extracts the iam.Identity.
 func (v *FirebaseValidator) Validate(ctx context.Context, tokenStr string) (iam.Identity, error) {
 	if strings.TrimSpace(tokenStr) == "" {
-		return iam.Identity{}, stderr.NewUnauthorized("missing firebase id token")
+		return iam.Identity{}, stderr.NewUnauthorized("missing firebase id token").WithKey(iam.KeyUnauthenticated)
 	}
 	if v.client == nil {
 		return iam.Identity{}, stderr.NewInternal("firebase auth client is not configured")
@@ -36,7 +36,7 @@ func (v *FirebaseValidator) Validate(ctx context.Context, tokenStr string) (iam.
 
 	token, err := v.client.VerifyIDToken(ctx, tokenStr)
 	if err != nil {
-		return iam.Identity{}, stderr.Wrap(stderr.CodeUnauthorized, err, "invalid or expired firebase token")
+		return iam.Identity{}, stderr.Wrap(stderr.CodeUnauthorized, err, "invalid or expired firebase token").WithKey(iam.KeyUnauthenticated)
 	}
 
 	var email string

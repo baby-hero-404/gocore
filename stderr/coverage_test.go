@@ -17,7 +17,7 @@ func TestCode_String(t *testing.T) {
 		{CodeAlreadyExists, "ALREADY_EXISTS"}, {CodeInternal, "INTERNAL_SERVER_ERROR"},
 		{CodeDatabaseError, "DATABASE_ERROR"}, {CodeCacheError, "CACHE_ERROR"},
 		{CodeUnavailable, "SERVICE_UNAVAILABLE"}, {CodeTimeout, "GATEWAY_TIMEOUT"},
-		{CodeLockHeld, "LOCK_HELD"}, {Code(9999), "UNKNOWN_ERROR"},
+		{CodeLockHeld, "LOCK_HELD"}, {CodeTooManyRequests, "TOO_MANY_REQUESTS"}, {Code(9999), "UNKNOWN_ERROR"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

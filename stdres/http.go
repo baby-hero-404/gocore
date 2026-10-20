@@ -19,15 +19,16 @@ func WriteJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
 
 // WriteOK responds with HTTP 200 and the standard success envelope.
 func WriteOK(w http.ResponseWriter, r *http.Request, data any) {
-	WriteJSON(w, r, http.StatusOK, Success(data))
+	WriteJSON(w, r, http.StatusOK, SuccessCtx(r.Context(), data))
 }
 
 // WriteCreated responds with HTTP 201 and the created envelope.
 func WriteCreated(w http.ResponseWriter, r *http.Request, data any) {
 	WriteJSON(w, r, http.StatusCreated, Envelope{
-		Code:    int(stderr.CodeOK),
-		Message: "created",
-		Data:    data,
+		Code:      int(stderr.CodeOK),
+		Message:   "created",
+		Data:      data,
+		RequestID: requestIDFromContext(r.Context()),
 	})
 }
 

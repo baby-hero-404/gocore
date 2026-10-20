@@ -2,12 +2,15 @@ package stdgin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/baby-hero-404/gocore/stderr"
+	"github.com/baby-hero-404/gocore/stdlog"
 	"github.com/baby-hero-404/gocore/stdres"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -135,5 +138,24 @@ func TestHandleValidationErrors(t *testing.T) {
 	}
 	if !fields["user_age"] {
 		t.Errorf("expected field user_age in details, got %v", fields)
+	}
+}
+
+func TestSuccessResponsesCarryRequestID(t *testing.T) {
+	engine := gin.New()
+	engine.Use(func(c *gin.Context) {
+		ctx := context.WithValue(c.Request.Context(), stdlog.RequestIDCtxKey, "rid-42")
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	})
+	engine.GET("/ok", func(c *gin.Context) { OK(c, gin.H{"a": 1}) })
+	engine.GET("/created", func(c *gin.Context) { Created(c, gin.H{"a": 1}) })
+	engine.GET("/json", func(c *gin.Context) { JSON(c, http.StatusAccepted, gin.H{"a": 1}) })
+	for _, path := range []string{"/ok", "/created", "/json"} {
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if !strings.Contains(w.Body.String(), `"request_id":"rid-42"`) {
+			t.Errorf("%s: body %s lacks request_id", path, w.Body.String())
+		}
 	}
 }

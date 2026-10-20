@@ -10,11 +10,11 @@ import (
 // It returns a 401 *stderr.Error when the header is missing or malformed.
 func BearerToken(header string) (string, error) {
 	if header == "" {
-		return "", stderr.NewUnauthorized("authorization header is required")
+		return "", stderr.NewUnauthorized("authorization header is required").WithKey(KeyUnauthenticated)
 	}
 	parts := strings.SplitN(header, " ", 2)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return "", stderr.NewUnauthorized("invalid authorization format, expected 'Bearer <token>'")
+		return "", stderr.NewUnauthorized("invalid authorization format, expected 'Bearer <token>'").WithKey(KeyUnauthenticated)
 	}
 	return strings.TrimSpace(parts[1]), nil
 }

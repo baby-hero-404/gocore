@@ -34,6 +34,19 @@ func main() {
 }
 ```
 
+**Issuing tokens.** `iam.NewJWTSigner(cfg)` issues HMAC tokens that a `JWTValidator` with the same `JWTConfig` accepts. Extra claims (e.g. a session ID) end up in `Identity.Metadata`:
+
+```go
+signer, _ := iam.NewJWTSigner(iam.JWTConfig{Secret: "supersecretkey"})
+token, _ := signer.Sign(userID, 30*24*time.Hour, map[string]any{"sid": sessionID})
+```
+
+**Token from a cookie.** For web apps that keep the token in an HttpOnly cookie, `iamgin.WithCookie(name)` reads the cookie first and falls back to the `Authorization: Bearer` header:
+
+```go
+protected := r.Group("/api", iamgin.JWTMiddleware(validator, iamgin.WithCookie("session")))
+```
+
 ### 2. Casbin RBAC Authorization
 
 ```go

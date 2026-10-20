@@ -23,6 +23,8 @@ const (
 	// Authentication & Authorization errors (4000 - 4099)
 	CodeUnauthorized Code = 4001 // HTTP 401
 	CodeForbidden    Code = 4003 // HTTP 403
+	// CodeTooManyRequests indicates the caller exceeded a rate limit (e.g. login attempts).
+	CodeTooManyRequests Code = 4029 // HTTP 429
 
 	// Resource errors (4100 - 4199)
 	CodeNotFound      Code = 4104 // HTTP 404
@@ -53,6 +55,8 @@ func (c Code) HTTPStatus() int {
 		return http.StatusUnauthorized
 	case c == CodeForbidden:
 		return http.StatusForbidden
+	case c == CodeTooManyRequests:
+		return http.StatusTooManyRequests
 	case c == CodeNotFound:
 		return http.StatusNotFound
 	case c == CodeConflict || c == CodeAlreadyExists || c == CodeLockHeld:
@@ -83,6 +87,8 @@ func (c Code) String() string {
 		return "UNAUTHORIZED"
 	case CodeForbidden:
 		return "FORBIDDEN"
+	case CodeTooManyRequests:
+		return "TOO_MANY_REQUESTS"
 	case CodeNotFound:
 		return "NOT_FOUND"
 	case CodeConflict:
