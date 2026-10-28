@@ -10,6 +10,13 @@ gocore is pre-1.0, so a minor version may contain breaking changes. Each one lis
   `http.ServeMux` and any router built on `net/http`. The Gin middleware in `httpserver` now shares its CORS
   decision, request-ID validation and request-log format with it (behaviour unchanged).
 - `iam/iamhttp`: `JWT` (bearer header or cookie) and `Casbin` middleware for `net/http`, the counterpart of `iamgin`.
+- `httpmw.RequestLogger(httpmw.WithClientIP(fn))`: log a client IP resolved by your own trusted-proxy logic.
+
+### Fixed
+- `httpmw.Recovery` no longer turns `panic(http.ErrAbortHandler)` into a clean end of response: it closes the
+  connection (HTTP/1.x) so a truncated body, for example from `httputil.ReverseProxy`, reaches the client as an error.
+- The `httpmw` docs no longer suggest Chi's `middleware.RealIP`, which Chi deprecated because it lets any client
+  choose the address that is logged and rate limited; they point to trusted-proxy resolution instead.
 
 ## [0.3.0] - 2026-10-28
 

@@ -29,5 +29,5 @@ r.Use(
 
 Notes:
 * Order: put `RequestID` first so later middleware and handlers see the ID; `Recovery` before `RequestLogger` so a panicking request is still logged with its 500.
-* The client IP is the connection's remote address. Behind a proxy, run a RealIP-style middleware (Chi's `middleware.RealIP`) before `RequestLogger`.
-* `http.ErrAbortHandler` is treated like any other panic (recovered, 500 if nothing was written); library code does not re-panic.
+* The logged client IP is the connection's remote address (the proxy, when you run behind one). To log the real client, resolve it from forwarding headers **only from trusted proxies** and pass it in: `httpmw.RequestLogger(httpmw.WithClientIP(func(r *http.Request) string { return chimw.GetClientIP(r.Context()) }))` after `r.Use(chimw.ClientIPFromXFF("10.0.0.0/8"))`. Do not use Chi's `middleware.RealIP` for this: it is deprecated because it copies `X-Forwarded-For`/`X-Real-IP` into `RemoteAddr` from any caller, so clients can choose the address that is logged and rate limited.
+* `http.ErrAbortHandler` (what `httputil.ReverseProxy` panics with when an upstream body breaks) is honoured without panicking: `Recovery` closes the connection so clients see a truncated response as an error. Where the connection cannot be taken over (HTTP/2) it logs a warning and answers 500 if nothing was written.

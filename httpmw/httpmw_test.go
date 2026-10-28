@@ -3,24 +3,56 @@ package httpmw
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/baby-hero-404/gocore/stdlog"
 	"github.com/baby-hero-404/gocore/stdres"
 )
 
-func captureLogs(t *testing.T) *bytes.Buffer {
+// syncBuffer is a bytes.Buffer safe for the server goroutines that log while the test reads.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+func (b *syncBuffer) Reset() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.buf.Reset()
+}
+
+func (b *syncBuffer) Len() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Len()
+}
+
+func captureLogs(t *testing.T) *syncBuffer {
 	t.Helper()
-	var buf bytes.Buffer
+	buf := &syncBuffer{}
 	prev := stdlog.Get()
-	stdlog.SetDefault(stdlog.New(stdlog.WithOutput(&buf), stdlog.WithLevel(slog.LevelDebug)))
+	stdlog.SetDefault(stdlog.New(stdlog.WithOutput(buf), stdlog.WithLevel(slog.LevelDebug)))
 	t.Cleanup(func() { stdlog.SetDefault(prev) })
-	return &buf
+	return buf
 }
 
 func serve(h http.Handler, method, target string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -319,5 +351,86 @@ func TestMiddlewareChainWithServeMux(t *testing.T) {
 	w := serve(h, http.MethodGet, "/items/42", map[string]string{"Origin": "https://x.example"})
 	if w.Code != http.StatusOK || w.Body.String() != "item 42" || w.Header().Get(HeaderRequestID) == "" || w.Header().Get("Access-Control-Allow-Origin") != "*" {
 		t.Errorf("got %d %q %v", w.Code, w.Body.String(), w.Header())
+	}
+}
+
+func TestRecovery_AbortHandlerClosesTheConnection(t *testing.T) {
+	logs := captureLogs(t)
+	tests := []struct {
+		name    string
+		handler http.HandlerFunc
+	}{
+		{"after a partial streamed body", func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("partial-"))
+			w.(http.Flusher).Flush()
+			panic(http.ErrAbortHandler)
+		}},
+		{"before anything was written", func(w http.ResponseWriter, r *http.Request) { panic(http.ErrAbortHandler) }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logs.Reset()
+			srv := httptest.NewServer(RequestLogger()(Recovery()(tt.handler)))
+			defer srv.Close()
+
+			resp, err := http.Get(srv.URL) //nolint:noctx // test client
+			if err == nil {
+				defer func() { _ = resp.Body.Close() }()
+				if _, readErr := io.ReadAll(resp.Body); readErr == nil {
+					t.Fatal("a truncated response must surface as an error to the client, not as a clean end")
+				}
+			}
+			if strings.Contains(logs.String(), "unhandled panic recovered") {
+				t.Errorf("an intentional abort is not an unhandled panic: %s", logs.String())
+			}
+		})
+	}
+}
+
+func TestRecovery_AbortHandlerWithoutHijackFallsBack(t *testing.T) {
+	logs := captureLogs(t)
+
+	t.Run("nothing written yet gives a 500 envelope", func(t *testing.T) {
+		h := Recovery()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic(http.ErrAbortHandler) }))
+		w := serve(h, http.MethodGet, "/", nil)
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("status = %d, want 500", w.Code)
+		}
+	})
+	t.Run("response already started is left alone and a warning is logged", func(t *testing.T) {
+		logs.Reset()
+		h := Recovery()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("partial"))
+			panic(http.ErrAbortHandler)
+		}))
+		w := serve(h, http.MethodGet, "/", nil)
+		if w.Code != http.StatusOK || w.Body.String() != "partial" || !strings.Contains(logs.String(), "cannot be closed") {
+			t.Errorf("got %d %q logs=%s", w.Code, w.Body.String(), logs.String())
+		}
+	})
+}
+
+func TestRequestLogger_WithClientIP(t *testing.T) {
+	logs := captureLogs(t)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.2:5555"
+	req.Header.Set("X-Forwarded-For", "198.51.100.7")
+
+	resolve := func(r *http.Request) string { return r.Header.Get("X-Forwarded-For") }
+	RequestLogger(WithClientIP(resolve))(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
+	if !strings.Contains(logs.String(), `"client_ip":"198.51.100.7"`) {
+		t.Errorf("custom resolver must be used: %s", logs.String())
+	}
+
+	logs.Reset()
+	RequestLogger()(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
+	if !strings.Contains(logs.String(), `"client_ip":"10.0.0.2"`) || strings.Contains(logs.String(), "198.51.100.7") {
+		t.Errorf("default must ignore forwarding headers: %s", logs.String())
+	}
+
+	logs.Reset()
+	RequestLogger(WithClientIP(nil))(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(httptest.NewRecorder(), req)
+	if !strings.Contains(logs.String(), `"client_ip":"10.0.0.2"`) {
+		t.Errorf("a nil resolver keeps the default: %s", logs.String())
 	}
 }

@@ -84,10 +84,39 @@ func (w *statusWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // Unwrap exposes the underlying writer to http.ResponseController.
 func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
+// LoggerOption configures RequestLogger.
+type LoggerOption func(*loggerOptions)
+
+type loggerOptions struct {
+	clientIP func(*http.Request) string
+}
+
+// WithClientIP sets how the logged client IP is resolved. The default is the connection's remote
+// address, which behind a reverse proxy is the proxy. Pass a resolver that only trusts forwarding
+// headers from known proxies, for example Chi's trusted-proxy middleware:
+//
+//	r.Use(chimw.ClientIPFromXFF("10.0.0.0/8"))
+//	r.Use(httpmw.RequestLogger(httpmw.WithClientIP(func(r *http.Request) string {
+//	    return chimw.GetClientIP(r.Context())
+//	})))
+//
+// Do not use middleware that copies X-Forwarded-For or X-Real-IP into RemoteAddr without checking
+// who sent them (such as Chi's deprecated RealIP): any client can then choose its logged address.
+func WithClientIP(resolve func(*http.Request) string) LoggerOption {
+	return func(o *loggerOptions) {
+		if resolve != nil {
+			o.clientIP = resolve
+		}
+	}
+}
+
 // RequestLogger logs method, path (with query), status, latency and client IP once per request.
-// The client IP is the connection's remote address; put a RealIP-style middleware (Chi's RealIP, or
-// a reverse proxy rewriting RemoteAddr) before it when running behind a proxy.
-func RequestLogger() Middleware {
+// The client IP is the connection's remote address unless WithClientIP says otherwise.
+func RequestLogger(opts ...LoggerOption) Middleware {
+	o := loggerOptions{clientIP: clientIP}
+	for _, opt := range opts {
+		opt(&o)
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -99,7 +128,7 @@ func RequestLogger() Middleware {
 			if r.URL.RawQuery != "" {
 				path += "?" + r.URL.RawQuery
 			}
-			LogRequest(r.Context(), r.Method, path, sw.status, time.Since(start), clientIP(r))
+			LogRequest(r.Context(), r.Method, path, sw.status, time.Since(start), o.clientIP(r))
 		})
 	}
 }

@@ -1,6 +1,6 @@
 {
   "project": "gocore",
-  "lastScanned": "2026-10-28T17:22:30+07:00",
+  "lastScanned": "2026-10-28T17:53:04+07:00",
   "checksums": {
     "go.mod": "84bdfd110d0d0bdb72980382dddcb068a51f03c669269fe64aabd03e642aa8e8",
     "Makefile": "bd03a5bde053d64b18123626d49b527eb2ab393755504f8d21256aa9a1aed5d8",
@@ -18,8 +18,8 @@
     ".agents/rules/agent-workflow.md": "0335e3484e38cc8643654e1c14d1aabfe24133ecbd5e1a087cb15290e8a622e7",
     ".golangci.yml": "b6340d21536ae2d1e403bcd5c4b1fb2b88643bbed8a01eaaf9d8e792d0cea1d9",
     ".github/workflows/verify.yml": "30b3bfc0b6d3d395c0e2b42bcb1ceb9744d4646e7778a5e3f8d9321ed40ec8f5",
-    "coverage-baseline.txt": "55a1e2a070ba2ab99a54f337aa044bdb2dc1e70a89b7423f706fe70fd68dc969",
-    "CHANGELOG.md": "24f2fb7a477701d7e246b7409ffedd47bc3fa6eda775f44bed940dd06e6bda8e"
+    "coverage-baseline.txt": "084c6c9ecdc403a61da83c6272dfc6ebbe90b208484d5d4b99208f1b03ca2c94",
+    "CHANGELOG.md": "24519061b28c5b99b4a5f468962718afcf883893d8bfb83665c2e70e913682ef"
   },
   "autoRefreshTriggers": [
     "go.mod",
