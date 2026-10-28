@@ -32,7 +32,7 @@
 
 ## Repository Map
 - Flat top-level packages: `stderr/`, `stdlog/`, `stdres/`, `env/`, `database/`, `cache/`, `lock/`, `queue/`, `httpserver/`, `iam/`, `monitor/`
-- Sub-packages: `database/pagination`
+- Sub-packages: `database/pagination`, driver packages `database/{postgres,mysql,sqlite}` and `database/anydriver`
 - Sub-package adapters: `stdres/stdgin`, `iam/iamgin`, `iam/firebase`, `monitor/prom`, `monitor/promgin`, `monitor/sentry`, `monitor/graylog`
 - Mock packages: `<pkg>/<pkg>mock` (e.g. `cache/cachemock`): generated `mock_<Interface>.go` (never hand-edit) plus a hand-written `doc.go` holding compile-time `var _ Iface = (*Mock)(nil)` assertions
 - `docs/openspecs/gocore-foundation/`: Active architecture OpenSpec (proposal, design, specs, tasks)

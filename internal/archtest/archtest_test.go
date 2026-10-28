@@ -33,7 +33,10 @@ var vendorOwners = map[string][]string{
 	"github.com/segmentio/kafka-go":       {"queue/kafka/consumer", "queue/kafka/producer"},
 	"github.com/redis/go-redis":           {"cache", "cache/cachemock", "lock"},
 	"github.com/go-redsync/redsync":       {"lock"},
-	"gorm.io":                             {"database", "database/databasemock", "database/pagination"},
+	"gorm.io/gorm":                        {"database", "database/databasemock", "database/pagination", "database/postgres", "database/mysql", "database/sqlite"},
+	"gorm.io/driver/postgres":             {"database/postgres"},
+	"gorm.io/driver/mysql":                {"database/mysql"},
+	"gorm.io/driver/sqlite":               {"database/sqlite"},
 	"google.golang.org/grpc":              {"grpcserver"}, // reserved: gRPC is not implemented yet
 	"connectrpc.com":                      {"grpcserver"}, // reserved: gRPC is not implemented yet
 	"github.com/spf13/viper":              {"env"},

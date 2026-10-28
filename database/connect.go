@@ -14,8 +14,19 @@ import (
 // maxRetryBackoff bounds the exponential retry delay so large RetryAttempts cannot sleep for minutes.
 const maxRetryBackoff = 30 * time.Second
 
-// connect connects to any relational database dialector with connection pooling, health checks, and bounded retries.
-func connect(ctx context.Context, driverName string, dialector gorm.Dialector, cfg Config, opts ...Option) (*gorm.DB, error) {
+// Connect opens dialector with connection pooling, a startup ping and bounded retries, and returns
+// the *gorm.DB. Driver packages (database/postgres, database/mysql, database/sqlite) build the
+// dialector; the core never imports a driver, so services only carry the driver they use.
+//
+// Connect owns the pool it opens: after a failed ping it closes that pool before retrying. A
+// dialector that wraps an existing *sql.DB (its Conn field) therefore has that handle closed on
+// failure; pass a DSN-based dialector, as the driver packages do, when retries must work.
+func Connect(ctx context.Context, dialector gorm.Dialector, cfg Config, opts ...Option) (*gorm.DB, error) {
+	if dialector == nil {
+		return nil, stderr.NewValidation("database configuration invalid").
+			WithDetails(stderr.FieldError{Field: "dialector", Message: "dialector cannot be nil", Tag: "required"})
+	}
+	driverName := dialector.Name()
 	if strings.TrimSpace(cfg.DSN) == "" {
 		return nil, stderr.NewValidation("database configuration invalid").
 			WithDetails(stderr.FieldError{

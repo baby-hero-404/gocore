@@ -35,7 +35,9 @@ These rules are enforced by `internal/archtest`. See `.agents/rules/` for the fu
 | `stdres` | API response envelope & validation mappers (net/http core) | `translator.go`, `response.go`, `http.go`, `validation.go` | Ready |
 | `stdres/stdgin` | Gin adapter for `stdres` | `gin.go` | Ready |
 | `env` | Config loading (viper + fail-fast validation) | `spec.go`, `new.go`, `option.go`, `validate.go`, `dotenv.go` | Ready |
-| `database` | Postgres/MySQL/SQLite GORM wrapper with pooling & context-aware retries | `spec.go`, `new.go`, `option.go`, `ping.go`, `close.go` | Ready |
+| `database` | GORM wrapper core: pooling, context-aware retries, error mapping (no driver imports) | `spec.go`, `new.go`, `option.go`, `ping.go`, `close.go` | Ready |
+| `database/postgres`, `database/mysql`, `database/sqlite` | Driver packages: import only the one you use (`New`, `Open`) | `postgres.go` | Ready |
+| `database/anydriver` | Picks the driver from `database.Config.Driver` at runtime; links every driver | `anydriver.go` | Ready |
 | `database/pagination` | Cursor (HMAC-signed, multi-column keyset) and offset pagination for GORM | `cursor.go`, `offset.go`, `codec.go`, `sort.go` | Ready |
 | `cache` | Redis wrapper with timeouts & error mapping | `spec.go`, `new.go`, `option.go`, `get.go`, `set.go`, `del.go` | Ready |
 | `lock` | Distributed lock (Redis Redlock via redsync) | `spec.go`, `new.go`, `option.go`, `acquire.go`, `release.go` | Ready |
@@ -64,6 +66,7 @@ import (
 	"syscall"
 
 	"github.com/baby-hero-404/gocore/database"
+	"github.com/baby-hero-404/gocore/database/postgres"
 	"github.com/baby-hero-404/gocore/env"
 	"github.com/baby-hero-404/gocore/httpserver"
 	"github.com/baby-hero-404/gocore/monitor/prom"
@@ -87,7 +90,7 @@ func main() {
 	stdlog.Info("Starting service...")
 
 	// Connect Database (implements database.Database interface)
-	db, err := database.New(context.Background(), cfg.Database)
+	db, err := postgres.New(context.Background(), cfg.Database)
 	if err != nil {
 		log.Fatalf("Database connection error: %v", err)
 	}

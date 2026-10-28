@@ -17,6 +17,18 @@ type JWTConfig struct {
 	Issuer        string        `mapstructure:"issuer" json:"issuer"`
 	Audience      string        `mapstructure:"audience" json:"audience"`
 	ClockSkew     time.Duration `mapstructure:"clock_skew" json:"clock_skew"`
+
+	// IDClaim names the claim holding the user id (string or number). Empty keeps the default
+	// lookup: "sub", then "id".
+	IDClaim string `mapstructure:"id_claim" json:"id_claim"`
+	// RolesClaim names the claim holding roles (a list of strings or a single string). Empty keeps
+	// the default lookup: "roles", then "role".
+	RolesClaim string `mapstructure:"roles_claim" json:"roles_claim"`
+	// TokenType, when set, makes JWTSigner write it as the "typ" claim and JWTValidator reject
+	// tokens whose "typ" differs. Set it on every signer and validator of a service that issues
+	// more than one kind of token (for example access and refresh), otherwise they are
+	// interchangeable.
+	TokenType string `mapstructure:"token_type" json:"token_type"`
 }
 
 // DefaultJWTConfig returns conservative default settings for JWT validation.
@@ -77,14 +89,17 @@ func (v *JWTValidator) Validate(ctx context.Context, tokenStr string) (Identity,
 		return Identity{}, stderr.Wrap(stderr.CodeUnauthorized, err, "invalid or expired token").WithKey(KeyUnauthenticated)
 	}
 
-	// Extract standard claims
-	subject, _ := claims.GetSubject()
-	if subject == "" {
-		if id, ok := claims["id"].(string); ok {
-			subject = id
-		} else if subFloat, ok := claims["sub"].(float64); ok {
-			subject = fmt.Sprintf("%.0f", subFloat)
+	if v.cfg.TokenType != "" {
+		if typ, _ := claims["typ"].(string); typ != v.cfg.TokenType {
+			return Identity{}, stderr.NewUnauthorized("invalid token type").WithKey(KeyUnauthenticated)
 		}
+	}
+
+	subject := v.subject(claims)
+	if subject == "" && v.cfg.IDClaim != "" {
+		// A configured id claim is part of the token contract: a correctly signed token without it
+		// must not become an identity with an empty id.
+		return Identity{}, stderr.NewUnauthorized("token has no user id").WithKey(KeyUnauthenticated)
 	}
 
 	var email string
@@ -92,21 +107,69 @@ func (v *JWTValidator) Validate(ctx context.Context, tokenStr string) (Identity,
 		email = emailVal
 	}
 
-	var roles []string
-	if rolesVal, ok := claims["roles"].([]any); ok {
-		for _, r := range rolesVal {
-			if strRole, ok := r.(string); ok {
-				roles = append(roles, strRole)
-			}
-		}
-	} else if roleVal, ok := claims["role"].(string); ok {
-		roles = append(roles, roleVal)
-	}
-
 	return Identity{
 		ID:       subject,
 		Email:    email,
-		Roles:    roles,
+		Roles:    v.roles(claims),
 		Metadata: claims,
 	}, nil
+}
+
+// subject returns the user id from IDClaim, or from "sub" then "id" when IDClaim is empty.
+func (v *JWTValidator) subject(claims jwt.MapClaims) string {
+	if v.cfg.IDClaim != "" {
+		return claimString(claims[v.cfg.IDClaim])
+	}
+	subject, _ := claims.GetSubject()
+	if subject == "" {
+		if id, ok := claims["id"].(string); ok {
+			return id
+		}
+		return claimString(claims["sub"])
+	}
+	return subject
+}
+
+// roles returns the roles from RolesClaim, or from "roles" then "role" when RolesClaim is empty.
+func (v *JWTValidator) roles(claims jwt.MapClaims) []string {
+	if v.cfg.RolesClaim != "" {
+		return claimStrings(claims[v.cfg.RolesClaim])
+	}
+	if r := claimStrings(claims["roles"]); r != nil {
+		return r
+	}
+	return claimStrings(claims["role"])
+}
+
+// claimString renders a string or numeric claim as a string; other types yield "".
+func claimString(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case float64:
+		return fmt.Sprintf("%.0f", t)
+	default:
+		return ""
+	}
+}
+
+// claimStrings reads a list of strings or a single string claim, ignoring non-string entries.
+func claimStrings(v any) []string {
+	switch t := v.(type) {
+	case string:
+		if t == "" {
+			return nil
+		}
+		return []string{t}
+	case []any:
+		var out []string
+		for _, e := range t {
+			if s, ok := e.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }

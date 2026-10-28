@@ -60,3 +60,15 @@ adminGroup.GET("/users", listUsersHandler)
 ```
 
 > `iam` is framework-free (`BearerToken`, `Authorize`, validators). Gin glue is in `iam/iamgin`; Firebase is in `iam/firebase` so the Firebase SDK is only pulled in when used.
+
+## Custom claims and token types
+
+`JWTConfig` can adapt to an existing token format and keep different kinds of token apart:
+
+```go
+access := iam.JWTConfig{Secret: secret, IDClaim: "userId", RolesClaim: "role", TokenType: "access"}
+refresh := iam.JWTConfig{Secret: secret, IDClaim: "userId", RolesClaim: "role", TokenType: "refresh"}
+```
+
+* `IDClaim` / `RolesClaim` choose the claim names; empty keeps the default lookup (`sub` then `id`, `roles` then `role`).
+* `TokenType` makes `JWTSigner` write a `typ` claim and `JWTValidator` reject tokens with another `typ`. **If a service issues more than one kind of token, set it on every signer and validator**; without it an access token and a refresh token signed with the same secret are interchangeable.

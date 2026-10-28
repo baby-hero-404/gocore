@@ -36,6 +36,11 @@ func (s *serverImpl) Start(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.cfg.ShutdownTimeout)
 		defer cancel()
 		err := s.Shutdown(shutdownCtx)
+		if err != nil {
+			// Graceful shutdown ran out of time (for example a long-lived stream): drop the
+			// remaining connections instead of leaving them open until the process exits.
+			_ = s.httpServer.Close()
+		}
 		<-stopped // ListenAndServe has returned (after Shutdown it is always http.ErrServerClosed)
 		return err
 	}

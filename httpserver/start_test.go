@@ -145,7 +145,14 @@ func TestStart_ShutdownTimeoutIsReported(t *testing.T) {
 	defer cancel()
 	done := run(srv, ctx)
 	waitUp(t, port)
-	go func() { _, _ = http.Get(fmt.Sprintf("http://127.0.0.1:%d/stuck", port)) }() //nolint:noctx,bodyclose // fire and forget
+	reqErr := make(chan error, 1)
+	go func() {
+		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/stuck", port)) //nolint:noctx // test client
+		if err == nil {
+			_ = resp.Body.Close()
+		}
+		reqErr <- err
+	}()
 	<-started
 	cancel()
 
@@ -153,6 +160,16 @@ func TestStart_ShutdownTimeoutIsReported(t *testing.T) {
 	var se *stderr.Error
 	if !errors.As(err, &se) || se.Code != stderr.CodeInternal || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("want CodeInternal wrapping DeadlineExceeded, got %v", err)
+	}
+
+	// The stuck request must be cut off (connection closed), not left hanging until process exit.
+	select {
+	case err := <-reqErr:
+		if err == nil {
+			t.Error("the stuck request unexpectedly succeeded")
+		}
+	case <-time.After(3 * time.Second):
+		t.Error("the stuck connection was not closed after the shutdown timeout")
 	}
 }
 

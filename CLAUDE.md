@@ -16,4 +16,4 @@ Strict adherence to workspace rules is required:
 - Follow package hierarchy in [.agents/rules/architecture.md](.agents/rules/architecture.md) (Flat packages, bottom-up deps)
 - Write table-driven unit tests per [.agents/rules/testing.md](.agents/rules/testing.md)
 - Follow commit format in [.agents/rules/git-workflow.md](.agents/rules/git-workflow.md)
-- Active OpenSpec: [docs/openspecs/gocore-foundation/](docs/openspecs/gocore-foundation/)
+- Active OpenSpec: [docs/openspecs/consumer-fit-v0.3.0/](docs/openspecs/consumer-fit-v0.3.0/) (previous: `golib-adoption`, `gocore-foundation`)

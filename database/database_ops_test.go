@@ -15,6 +15,7 @@ import (
 
 	"github.com/baby-hero-404/gocore/stderr"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -23,10 +24,10 @@ var memSeq atomic.Int64
 
 func newMemDB(t *testing.T, opts ...Option) Database {
 	t.Helper()
-	cfg := Config{Driver: "sqlite", DSN: fmt.Sprintf("file:dbops%d?mode=memory&cache=shared", memSeq.Add(1)), LogLevel: "silent"}
-	db, err := New(context.Background(), cfg, opts...)
+	dsn := fmt.Sprintf("file:dbops%d?mode=memory&cache=shared", memSeq.Add(1))
+	db, err := Open(context.Background(), sqlite.Open(dsn), Config{DSN: dsn, LogLevel: "silent"}, opts...)
 	if err != nil {
-		t.Fatalf("New: %v", err)
+		t.Fatalf("Open: %v", err)
 	}
 	return db
 }
@@ -149,7 +150,7 @@ func TestConnect_FailedAttemptsReleaseTheirPool(t *testing.T) {
 	// exercise connect's own PingContext failure path.
 	dialector := mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true})
 	cfg := Config{DSN: "unused", RetryAttempts: 1, RetryBackoff: time.Millisecond, LogLevel: "silent"}
-	db, err := connect(context.Background(), "test", dialector, cfg, WithGormConfig(&gorm.Config{DisableAutomaticPing: true}))
+	db, err := Connect(context.Background(), dialector, cfg, WithGormConfig(&gorm.Config{DisableAutomaticPing: true}))
 	if err == nil || db != nil {
 		t.Fatalf("expected connection failure, got db=%v err=%v", db, err)
 	}
@@ -214,4 +215,13 @@ func TestConfig_SecretOmittedFromJSON(t *testing.T) {
 	if strings.Contains(out, "super_secret_pw") || strings.Contains(out, "dsn") {
 		t.Errorf("expected secret DSN to be omitted from JSON, got %s", out)
 	}
+}
+
+func asStdErr(t *testing.T, err error) *stderr.Error {
+	t.Helper()
+	var se *stderr.Error
+	if !errors.As(err, &se) {
+		t.Fatalf("expected *stderr.Error, got %T (%v)", err, err)
+	}
+	return se
 }

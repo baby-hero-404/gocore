@@ -2,15 +2,12 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/baby-hero-404/gocore/stderr"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -19,36 +16,13 @@ type impl struct {
 	db *gorm.DB
 }
 
-// New creates a production-ready Database instance implementing the Database interface.
-func New(ctx context.Context, cfg Config, opts ...Option) (Database, error) {
-	cfg.applyDefaults()
-	var db *gorm.DB
-	var err error
-
-	switch strings.ToLower(cfg.Driver) {
-	case "mysql":
-		db, err = NewMySQL(ctx, cfg, opts...)
-	case "sqlite":
-		db, err = NewSQLite(ctx, cfg, opts...)
-	case "postgres", "":
-		db, err = NewPostgres(ctx, cfg, opts...)
-	default:
-		return nil, stderr.NewValidation("database configuration invalid").
-			WithDetails(stderr.FieldError{
-				Field:   "driver",
-				Message: fmt.Sprintf("unsupported database driver: %s", cfg.Driver),
-				Tag:     "oneof",
-			})
-	}
+// Open is Connect wrapped in the Database interface.
+func Open(ctx context.Context, dialector gorm.Dialector, cfg Config, opts ...Option) (Database, error) {
+	db, err := Connect(ctx, dialector, cfg, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return &impl{db: db}, nil
-}
-
-// NewPostgres connects to PostgreSQL with connection pooling, health checks, and bounded retries.
-func NewPostgres(ctx context.Context, cfg Config, opts ...Option) (*gorm.DB, error) {
-	return connect(ctx, "postgres", postgres.Open(cfg.DSN), cfg, opts...)
 }
 
 // DB returns the underlying *gorm.DB instance.

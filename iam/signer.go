@@ -32,7 +32,8 @@ func NewJWTSigner(cfg JWTConfig) (*JWTSigner, error) {
 }
 
 // Sign issues a token for subject with the given lifetime. Extra claims (e.g. a session ID)
-// are added as-is; "sub", "iat" and "exp" (and "iss"/"aud" when configured) are always set by the signer.
+// are added as-is; "sub", "iat" and "exp" (and "iss"/"aud", IDClaim and "typ" when configured) are
+// always set by the signer.
 func (s *JWTSigner) Sign(subject string, ttl time.Duration, extra map[string]any) (string, error) {
 	if strings.TrimSpace(subject) == "" {
 		return "", stderr.NewInternal("jwt signer: subject is required")
@@ -47,6 +48,12 @@ func (s *JWTSigner) Sign(subject string, ttl time.Duration, extra map[string]any
 		claims[k] = v
 	}
 	claims["sub"] = subject
+	if s.cfg.IDClaim != "" {
+		claims[s.cfg.IDClaim] = subject
+	}
+	if s.cfg.TokenType != "" {
+		claims["typ"] = s.cfg.TokenType
+	}
 	claims["iat"] = now.Unix()
 	claims["exp"] = now.Add(ttl).Unix()
 	if s.cfg.Issuer != "" {
