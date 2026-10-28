@@ -3,6 +3,14 @@
 All notable changes to gocore. Format follows [Keep a Changelog](https://keepachangelog.com/);
 gocore is pre-1.0, so a minor version may contain breaking changes. Each one lists a migration step.
 
+## [Unreleased]
+
+### Added
+- `httpmw`: framework-neutral `net/http` middleware (`RequestID`, `Recovery`, `RequestLogger`, `CORS`) for Chi,
+  `http.ServeMux` and any router built on `net/http`. The Gin middleware in `httpserver` now shares its CORS
+  decision, request-ID validation and request-log format with it (behaviour unchanged).
+- `iam/iamhttp`: `JWT` (bearer header or cookie) and `Casbin` middleware for `net/http`, the counterpart of `iamgin`.
+
 ## [0.3.0] - 2026-10-28
 
 ### Changed (breaking)

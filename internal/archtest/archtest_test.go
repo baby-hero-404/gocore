@@ -48,7 +48,7 @@ var vendorOwners = map[string][]string{
 // rank orders top-level packages bottom-up: a package may only import gocore packages of
 // equal or lower rank, or packages under its own top-level directory.
 var rank = map[string]int{
-	"stderr": 0, "stdlog": 1, "stdres": 2, "env": 2, "monitor": 2,
+	"stderr": 0, "stdlog": 1, "stdres": 2, "env": 2, "monitor": 2, "httpmw": 3,
 	"database": 3, "cache": 3, "queue": 3, "lock": 4, "httpserver": 4, "grpcserver": 4, "iam": 5,
 }
 

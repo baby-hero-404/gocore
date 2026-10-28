@@ -23,6 +23,7 @@
   - `iam`: Auth toolkit (JWT, OAuth2, Firebase, Casbin), strictly isolated from direct infra package imports.
   - `monitor`: Observability connectors (Prometheus, Sentry, Graylog).
   - `database/pagination`: Cursor (HMAC-signed, multi-column keyset) and offset pagination for GORM.
+  - `httpmw`: framework-neutral `net/http` middleware (request ID, recovery, logging, CORS); `iam/iamhttp`: JWT/Casbin for net/http (Chi etc.).
   - `internal/archtest`: Architectural tests verifying package ranks, vendor isolation, doc comments, and no `init()`.
 
 ## Tech Stack

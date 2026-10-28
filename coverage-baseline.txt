@@ -8,10 +8,12 @@ github.com/baby-hero-404/gocore/database/pagination 94.1
 github.com/baby-hero-404/gocore/database/postgres 100.0
 github.com/baby-hero-404/gocore/database/sqlite 100.0
 github.com/baby-hero-404/gocore/env 95.3
-github.com/baby-hero-404/gocore/httpserver 99.2
+github.com/baby-hero-404/gocore/httpmw 99.0
+github.com/baby-hero-404/gocore/httpserver 98.8
 github.com/baby-hero-404/gocore/iam 98.7
 github.com/baby-hero-404/gocore/iam/firebase 100.0
 github.com/baby-hero-404/gocore/iam/iamgin 100.0
+github.com/baby-hero-404/gocore/iam/iamhttp 100.0
 github.com/baby-hero-404/gocore/lock 84.2
 github.com/baby-hero-404/gocore/monitor/graylog 100.0
 github.com/baby-hero-404/gocore/monitor/prom 100.0

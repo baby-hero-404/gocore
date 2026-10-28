@@ -120,8 +120,8 @@ func TestRequestIDMiddleware_ValidatesClientValue(t *testing.T) {
 	}{
 		{"uuid is kept", "3f2b8c1e-7d44-4a51-9a0e-1c2d3e4f5a6b", true},
 		{"trace style id is kept", "svc:abc_123.def/45+x=@y", true},
-		{"exactly max length is kept", strings.Repeat("a", maxRequestIDLen), true},
-		{"too long is replaced", strings.Repeat("a", maxRequestIDLen+1), false},
+		{"exactly max length is kept", strings.Repeat("a", 128), true},
+		{"too long is replaced", strings.Repeat("a", 128+1), false},
 		{"spaces are replaced", "has space", false},
 		{"newline is replaced", "line\nbreak", false},
 		{"non ascii is replaced", "tên-yêu-cầu", false},

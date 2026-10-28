@@ -43,8 +43,10 @@ These rules are enforced by `internal/archtest`. See `.agents/rules/` for the fu
 | `lock` | Distributed lock (Redis Redlock via redsync) | `spec.go`, `new.go`, `option.go`, `acquire.go`, `release.go` | Ready |
 | `queue/kafka/producer` | Kafka producer (JSON, batching, durability) | `spec.go`, `new.go`, `option.go`, `publish.go`, `close.go`, `mock.go` | Ready |
 | `queue/kafka/consumer` | Kafka consumer group (handler-driven) | `spec.go`, `new.go`, `option.go`, `fetch.go`, `subscribe.go`, `mock.go` | Ready |
+| `httpmw` | Framework-neutral `net/http` middleware: request ID, recovery, logging, CORS (Chi, ServeMux, ...) | `requestid.go`, `recovery.go`, `logger.go`, `cors.go` | Ready |
 | `httpserver` | Gin wrapper with recovery, CORS & tracing | `spec.go`, `new.go`, `option.go`, `start.go`, `shutdown.go` | Ready |
 | `iam` | Identity, JWT & OAuth2 validators, Casbin authorization (framework-free) | `spec.go`, `identity.go`, `jwt.go`, `oauth2.go`, `bearer.go`, `authorize.go` | Ready |
+| `iam/iamhttp` | JWT & Casbin middleware for `net/http` routers such as Chi | `iamhttp.go`, `option.go` | Ready |
 | `iam/iamgin` | Gin JWT & Casbin middleware | `iamgin.go` | Ready |
 | `iam/firebase` | Firebase ID token validator | `firebase.go` | Ready |
 | `monitor` | Metrics/error-tracking interfaces | `spec.go` | Ready |

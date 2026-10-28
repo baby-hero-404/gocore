@@ -101,7 +101,7 @@ Behaviour changes in v0.2.0 and v0.3.0 are invisible without notes.
 **Verify:**
 - [x] Every Public API removal in proposal.md has a migration line in CHANGELOG
 - [x] `make verify` and `make vuln` green
-- [ ] Tag `v0.3.0` pushed (only after user approval)
+- [x] Tag `v0.3.0` pushed (only after user approval)
 
 ## Phase 4: zero-note
 
@@ -152,7 +152,7 @@ A refresh token currently opens every protected route; use-case code depends on 
 - [x] Remove `replace`; `go get github.com/baby-hero-404/gocore@v0.3.0`; add `go.work` and `go.work.sum` to `.gitignore`
 
 **Verify:**
-- [ ] `docker build backend` succeeds from a clean clone
+- [x] `docker build backend` succeeds from a clean clone
 - [ ] App starts against Postgres and SQLite configs
 
 ## Phase 5: faster-learning
@@ -174,7 +174,7 @@ Build currently depends on a local checkout through `replace` + vendor.
 - [x] Update the `Dockerfile.api` comment and `make vendor` (vendor now comes from tags)
 
 **Verify:**
-- [ ] `make vendor && docker build -f Dockerfile.api .` succeeds from a clean clone
+- [x] `make vendor && docker build -f Dockerfile.api .` succeeds from a clean clone
 - [x] `internal/archtest` and full test suite pass
 
 ## Phase 6: auto_code_os
@@ -195,7 +195,7 @@ Removes 11 MB SQLite/CGO and MySQL code from `vendor/`.
 - [x] Remove gocore and aicli `replace`; require tags; ignore `go.work`; re-vendor
 
 **Verify:**
-- [ ] `vendor/modules.txt` has no `mattn/go-sqlite3` or mysql driver packages coming from gocore
+- [x] `vendor/` has no `gorm.io/driver/{mysql,sqlite}` or `go-sql-driver/mysql` (`go-sqlite3` stays: auto_code_os imports it itself)
 - [x] `server` builds and its tests pass; sandbox Dockerfile still builds (`go-tree-sitter` CGO unaffected)
 
 ---
@@ -229,3 +229,10 @@ Removes 11 MB SQLite/CGO and MySQL code from `vendor/`.
   and is covered by the new middleware tests.
 - zero-note: access and refresh tokens now carry `typ`; sessions issued before the deploy are
   rejected once and users sign in again.
+
+## Post-release verification (v0.3.0 tagged at ce7695f)
+- `GOWORK=off go mod tidy` + build + tests pass in zero-note, faster-learning and auto_code_os against the published tag.
+- `docker build` succeeds for zero-note (`backend/Dockerfile`) and faster-learning (`Dockerfile.api`); the auto_code_os sandbox image was not built.
+- faster-learning `vendor/` contains only `gorm.io/driver/postgres`; auto_code_os only that driver plus its own `go-sqlite3`.
+- **Footgun found:** `go mod vendor` drops header-only directories, so auto_code_os's CGO build of `smacker/go-tree-sitter` (`php/tree_sitter`, `sql/tree_sitter`) fails after re-vendoring. They were restored from the module cache; the Makefile vendor step should do this automatically.
+- Not done: zero-note handlers still put `err.Error()` into client messages, and its refresh cookie has no `Secure`/`SameSite` (see review notes).
