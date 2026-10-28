@@ -2,6 +2,7 @@ package lock
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -46,7 +47,8 @@ func (l *redisLocker) Acquire(ctx context.Context, key string, ttl time.Duration
 			"ttl", ttl.String(),
 			"error", err.Error(),
 		)
-		return nil, stderr.Wrap(stderr.CodeLockHeld, err, fmt.Sprintf("lock already held for key: %s", key))
+		code, msg := classifyAcquireError(ctx, err)
+		return nil, stderr.Wrap(code, err, fmt.Sprintf(msg, key))
 	}
 
 	stdlog.WithContext(ctx).Debug("distributed lock acquired", "key", key, "ttl", ttl.String())
@@ -55,6 +57,26 @@ func (l *redisLocker) Acquire(ctx context.Context, key string, ttl time.Duration
 		mutex: mutex,
 		key:   key,
 	}, nil
+}
+
+// classifyAcquireError separates real contention (HTTP 409) from infrastructure failures, so an
+// unreachable Redis is not reported to callers as "lock already held".
+func classifyAcquireError(ctx context.Context, err error) (stderr.Code, string) {
+	var taken *redsync.ErrTaken
+	var nodeTaken *redsync.ErrNodeTaken
+	var redisErr *redsync.RedisError
+	switch {
+	case ctx.Err() != nil:
+		return stderr.CodeTimeout, "lock acquisition cancelled or timed out for key: %s"
+	case errors.As(err, &taken), errors.Is(err, redsync.ErrFailed):
+		return stderr.CodeLockHeld, "lock already held for key: %s"
+	case errors.As(err, &redisErr):
+		return stderr.CodeUnavailable, "lock backend unavailable for key: %s"
+	case errors.As(err, &nodeTaken):
+		return stderr.CodeLockHeld, "lock already held for key: %s"
+	default:
+		return stderr.CodeUnavailable, "failed to acquire lock for key: %s"
+	}
 }
 
 // Acquire is a package-level helper that creates a temporary Locker and acquires the lock.

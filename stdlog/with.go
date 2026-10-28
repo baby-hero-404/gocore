@@ -81,19 +81,14 @@ func (l *loggerImpl) Slog() *slog.Logger {
 	return l.sl
 }
 
+// WithContext returns the default logger enriched with the IDs found in ctx.
 func WithContext(ctx context.Context) Logger {
 	return Get().WithContext(ctx)
 }
 
+// With returns the default logger with args attached to every record.
 func With(args ...any) Logger {
 	return Get().With(args...)
-}
-
-func keyToString(key any) string {
-	if s, ok := key.(string); ok {
-		return normalizeKeyName(s)
-	}
-	return "context_key"
 }
 
 // normalizeKeyName maps camelCase variants to their canonical snake_case form.

@@ -61,7 +61,7 @@ func TestError_Accessors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.err.HTTPStatus() != tt.wantStatus || tt.err.StatusCode() != tt.wantCode ||
-				tt.err.ErrorMessage() != tt.wantMsg || tt.err.Unwrap() != tt.wantCause {
+				tt.err.ErrorMessage() != tt.wantMsg || !errors.Is(tt.err.Unwrap(), tt.wantCause) {
 				t.Errorf("unexpected accessors for %v", tt.err)
 			}
 			if tt.err.Error() == "" {

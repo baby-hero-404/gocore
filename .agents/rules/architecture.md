@@ -81,3 +81,14 @@ Every infrastructure connector wrapper must provide:
 4. **No `init()` and no process-global mutation** (e.g. `gin.SetMode`) in library code.
 5. **Every package has a package doc comment** (`doc.go`).
 6. **Constructors:** `New(cfg Config, opts ...Option)` for a package's main type (add `ctx` only if construction does I/O); `NewX` when a package has several types.
+
+---
+
+## 6. Enforced Boundaries (ARCH-5, ARCH-6)
+
+* **ARCH-5 `[test]`**: Infrastructure packages (`database`, `cache`, `queue`, `lock`, `httpserver`, and the reserved `grpcserver`) do not import each other, except for entries in `infraAllowed` in `internal/archtest` (today: `lock → cache`). `iam` never imports `database`, `cache`, `queue` or `lock`; it depends on consumer interfaces. Adding an exception needs an ADR. Enforced by `TestInfraPackagesStayIndependent`.
+* **ARCH-6 `[review]`**: Keep the core transport-neutral so a second transport (gRPC/ConnectRPC) can be added without touching existing APIs:
+  * Logic shared by transports lives in transport-free packages: `stdlog.ContextWithRequestID`, `stderr.FromPanic`, `stderr.Code`.
+  * Gin-specific code stays in Gin adapters (`httpserver`, `stdres/stdgin`, `iam/iamgin`, `monitor/promgin`).
+  * A gRPC server will be a new top-level package `grpcserver` (rank 4, the only owner of `google.golang.org/grpc` and `connectrpc.com`, already reserved in archtest). Its gRPC status mapping from `stderr.Code` lives in `grpcserver`, so `stderr` stays dependency-free.
+  * Server packages expose `Start` and `Shutdown(ctx)` so an application can run several transports under one `errgroup`.

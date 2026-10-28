@@ -1,14 +1,22 @@
 package consumer
 
 import (
+	"context"
 	"strings"
 
 	"github.com/baby-hero-404/gocore/stderr"
 	"github.com/segmentio/kafka-go"
 )
 
+// reader is the subset of *kafka.Reader the consumer uses; it is the test seam for a fake broker.
+type reader interface {
+	FetchMessage(ctx context.Context) (kafka.Message, error)
+	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
+	Close() error
+}
+
 type impl struct {
-	reader *kafka.Reader
+	reader reader
 	topic  string
 }
 

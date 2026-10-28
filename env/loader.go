@@ -1,6 +1,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -19,7 +20,7 @@ func Load(prefix string, target any, opts ...Option) error {
 	}
 
 	val := reflect.ValueOf(target)
-	if val.Kind() != reflect.Ptr || val.Elem().Kind() != reflect.Struct {
+	if val.Kind() != reflect.Pointer || val.Elem().Kind() != reflect.Struct {
 		return stderr.NewBadRequest("configuration target must be a pointer to a struct")
 	}
 
@@ -71,7 +72,8 @@ func Load(prefix string, target any, opts ...Option) error {
 				return stderr.Wrap(stderr.CodeInvalidParam, err, fmt.Sprintf("failed to read config file: %s", o.configFile))
 			}
 			// If looking by path and not found, only report if it wasn't a ConfigFileNotFoundError
-			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			var notFound viper.ConfigFileNotFoundError
+			if !errors.As(err, &notFound) {
 				return stderr.Wrap(stderr.CodeInvalidParam, err, "failed to parse config file")
 			}
 		}
@@ -95,7 +97,7 @@ func Load(prefix string, target any, opts ...Option) error {
 }
 
 func bindStructKeys(v *viper.Viper, parentParts []string, t reflect.Type) {
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
@@ -115,7 +117,7 @@ func bindStructKeys(v *viper.Viper, parentParts []string, t reflect.Type) {
 
 		parts := append(parentParts, key)
 		fieldType := field.Type
-		if fieldType.Kind() == reflect.Ptr {
+		if fieldType.Kind() == reflect.Pointer {
 			fieldType = fieldType.Elem()
 		}
 

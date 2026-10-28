@@ -12,7 +12,7 @@ import (
 
 // JWTConfig defines verification parameters for JWTs.
 type JWTConfig struct {
-	Secret        string        `mapstructure:"secret" json:"secret"`
+	Secret        string        `mapstructure:"secret" json:"-"`
 	SigningMethod string        `mapstructure:"signing_method" json:"signing_method"` // default "HS256"
 	Issuer        string        `mapstructure:"issuer" json:"issuer"`
 	Audience      string        `mapstructure:"audience" json:"audience"`
@@ -30,13 +30,31 @@ func DefaultJWTConfig() JWTConfig {
 // JWTValidator validates JWTs using HMAC or RSA keys with golang-jwt/jwt/v5.
 type JWTValidator struct {
 	keyFunc jwt.Keyfunc
+	parser  *jwt.Parser
 	cfg     JWTConfig
 }
 
-// NewJWTValidator creates a JWTValidator configured with a secret key.
+// NewJWTValidator creates a JWTValidator configured with a secret key. When set, SigningMethod,
+// Issuer, Audience and ClockSkew are enforced (the issuer and audience must match, the signing
+// method must equal SigningMethod, and ClockSkew is the leeway for exp/nbf/iat checks).
 func NewJWTValidator(cfg JWTConfig) *JWTValidator {
+	var opts []jwt.ParserOption
+	if cfg.SigningMethod != "" {
+		opts = append(opts, jwt.WithValidMethods([]string{cfg.SigningMethod}))
+	}
+	if cfg.Issuer != "" {
+		opts = append(opts, jwt.WithIssuer(cfg.Issuer))
+	}
+	if cfg.Audience != "" {
+		opts = append(opts, jwt.WithAudience(cfg.Audience))
+	}
+	if cfg.ClockSkew > 0 {
+		opts = append(opts, jwt.WithLeeway(cfg.ClockSkew))
+	}
+
 	return &JWTValidator{
-		cfg: cfg,
+		cfg:    cfg,
+		parser: jwt.NewParser(opts...),
 		keyFunc: func(token *jwt.Token) (any, error) {
 			// Ensure token signing method matches expected
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -54,7 +72,7 @@ func (v *JWTValidator) Validate(ctx context.Context, tokenStr string) (Identity,
 	}
 
 	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenStr, claims, v.keyFunc)
+	token, err := v.parser.ParseWithClaims(tokenStr, claims, v.keyFunc)
 	if err != nil || !token.Valid {
 		return Identity{}, stderr.Wrap(stderr.CodeUnauthorized, err, "invalid or expired token").WithKey(KeyUnauthenticated)
 	}

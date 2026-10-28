@@ -15,31 +15,51 @@ const (
 	CodeOK Code = 0
 
 	// Validation and Client Request errors (1000 - 1999)
-	CodeInvalidParam     Code = 1000 // HTTP 400
+
+	// CodeInvalidParam indicates a missing or invalid request parameter.
+	CodeInvalidParam Code = 1000 // HTTP 400
+	// CodeValidationFailed indicates the payload failed field-level validation.
 	CodeValidationFailed Code = 1001 // HTTP 422
-	CodeMalformedBody    Code = 1002 // HTTP 400
-	CodeBadRequest       Code = 1003 // HTTP 400
+	// CodeMalformedBody indicates the request body could not be parsed.
+	CodeMalformedBody Code = 1002 // HTTP 400
+	// CodeBadRequest is a generic client error.
+	CodeBadRequest Code = 1003 // HTTP 400
 
 	// Authentication & Authorization errors (4000 - 4099)
+
+	// CodeUnauthorized indicates missing or invalid credentials.
 	CodeUnauthorized Code = 4001 // HTTP 401
-	CodeForbidden    Code = 4003 // HTTP 403
+	// CodeForbidden indicates the caller lacks permission.
+	CodeForbidden Code = 4003 // HTTP 403
 	// CodeTooManyRequests indicates the caller exceeded a rate limit (e.g. login attempts).
 	CodeTooManyRequests Code = 4029 // HTTP 429
 
 	// Resource errors (4100 - 4199)
-	CodeNotFound      Code = 4104 // HTTP 404
-	CodeConflict      Code = 4109 // HTTP 409
+
+	// CodeNotFound indicates the requested resource does not exist.
+	CodeNotFound Code = 4104 // HTTP 404
+	// CodeConflict indicates a state conflict with the current resource.
+	CodeConflict Code = 4109 // HTTP 409
+	// CodeAlreadyExists indicates the resource already exists.
 	CodeAlreadyExists Code = 4110 // HTTP 409
 
 	// Internal Server errors (5000 - 5099)
-	CodeInternal      Code = 5000 // HTTP 500
+
+	// CodeInternal is an unexpected server failure.
+	CodeInternal Code = 5000 // HTTP 500
+	// CodeDatabaseError is a failed database operation.
 	CodeDatabaseError Code = 5001 // HTTP 500
-	CodeCacheError    Code = 5002 // HTTP 500
+	// CodeCacheError is a failed cache operation.
+	CodeCacheError Code = 5002 // HTTP 500
 
 	// Infrastructure & Concurrency errors (5100 - 5199)
+
+	// CodeUnavailable indicates a dependency is temporarily unavailable.
 	CodeUnavailable Code = 5100 // HTTP 503
-	CodeTimeout     Code = 5101 // HTTP 504
-	CodeLockHeld    Code = 5102 // HTTP 409 (Conflict on lock acquisition)
+	// CodeTimeout indicates an operation exceeded its deadline.
+	CodeTimeout Code = 5101 // HTTP 504
+	// CodeLockHeld indicates a distributed lock is held by another owner.
+	CodeLockHeld Code = 5102 // HTTP 409 (Conflict on lock acquisition)
 )
 
 // HTTPStatus maps the Code to an HTTP status code deterministically.

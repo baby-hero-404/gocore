@@ -1,0 +1,52 @@
+# Mock generation (mockery v3, run via `make mocks`). Do not edit generated files by hand.
+# Only public contracts listed below get a mock. Mocks live in <pkg>/<pkg>mock so testify
+# never enters a production package (archtest TEST-2).
+template: testify
+template-data:
+  unroll-variadic: true
+dir: "{{.InterfaceDir}}/{{.SrcPackageName}}mock"
+pkgname: "{{.SrcPackageName}}mock"
+filename: "mock_{{.InterfaceName}}.go"
+structname: "{{.InterfaceName}}"
+formatter: goimports
+log-level: warn
+packages:
+  github.com/baby-hero-404/gocore/cache:
+    interfaces:
+      Cache:
+  github.com/baby-hero-404/gocore/database:
+    interfaces:
+      Database:
+  github.com/baby-hero-404/gocore/env:
+    interfaces:
+      Loader:
+  github.com/baby-hero-404/gocore/httpserver:
+    interfaces:
+      Server:
+  github.com/baby-hero-404/gocore/iam:
+    interfaces:
+      TokenValidator:
+      Enforcer:
+  github.com/baby-hero-404/gocore/lock:
+    interfaces:
+      Locker:
+      Lock:
+  github.com/baby-hero-404/gocore/monitor:
+    interfaces:
+      MetricsRecorder:
+      ErrorTracker:
+  github.com/baby-hero-404/gocore/queue/kafka/consumer:
+    interfaces:
+      Consumer:
+  github.com/baby-hero-404/gocore/queue/kafka/producer:
+    interfaces:
+      Producer:
+  github.com/baby-hero-404/gocore/stderr:
+    interfaces:
+      ErrorInterface:
+  github.com/baby-hero-404/gocore/stdlog:
+    interfaces:
+      Logger:
+  github.com/baby-hero-404/gocore/stdres:
+    interfaces:
+      Translator:

@@ -17,6 +17,7 @@ type Recorder struct {
 	cacheOpErrors       *prometheus.CounterVec
 	lockAcquireFailures prometheus.Counter
 	httpRequestDuration *prometheus.HistogramVec
+	httpInFlight        prometheus.Gauge
 }
 
 // NewRecorder creates and registers all gocore Prometheus metrics.
@@ -59,6 +60,12 @@ func NewRecorder(reg prometheus.Registerer) *Recorder {
 			Help:      "HTTP request latency histogram in seconds",
 			Buckets:   prometheus.DefBuckets,
 		}, []string{"method", "route", "status"}),
+		httpInFlight: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "gocore",
+			Subsystem: "http",
+			Name:      "in_flight_requests",
+			Help:      "Number of HTTP requests currently being served",
+		}),
 	}
 
 	reg.MustRegister(
@@ -67,6 +74,7 @@ func NewRecorder(reg prometheus.Registerer) *Recorder {
 		r.cacheOpErrors,
 		r.lockAcquireFailures,
 		r.httpRequestDuration,
+		r.httpInFlight,
 	)
 
 	return r
@@ -97,11 +105,11 @@ func (r *Recorder) RecordDuration(method, path string, statusCode int, duration 
 	r.httpRequestDuration.WithLabelValues(method, path, strconv.Itoa(statusCode)).Observe(duration.Seconds())
 }
 
-// IncrementInFlight is a no-op placeholder for in-flight request tracking.
-func (r *Recorder) IncrementInFlight() {}
+// IncrementInFlight marks one more HTTP request as being served.
+func (r *Recorder) IncrementInFlight() { r.httpInFlight.Inc() }
 
-// DecrementInFlight is a no-op placeholder for in-flight request tracking.
-func (r *Recorder) DecrementInFlight() {}
+// DecrementInFlight marks one HTTP request as finished.
+func (r *Recorder) DecrementInFlight() { r.httpInFlight.Dec() }
 
 // Handler returns the http.Handler serving the Prometheus /metrics endpoint.
 func Handler() http.Handler {

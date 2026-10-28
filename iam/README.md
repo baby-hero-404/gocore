@@ -47,6 +47,8 @@ token, _ := signer.Sign(userID, 30*24*time.Hour, map[string]any{"sid": sessionID
 protected := r.Group("/api", iamgin.JWTMiddleware(validator, iamgin.WithCookie("session")))
 ```
 
+> ⚠️ **Security Note (CSRF Protection):** `iamgin` extracts and verifies authentication tokens from cookies, but does **not** provide CSRF (Cross-Site Request Forgery) protection. Consuming services that authenticate via cookies must implement their own CSRF mitigation (e.g., `SameSite=Lax` or `SameSite=Strict` cookie policies, anti-CSRF synchronizer tokens / headers, or `Origin`/`Sec-Fetch-Site` request verification).
+
 ### 2. Casbin RBAC Authorization
 
 ```go

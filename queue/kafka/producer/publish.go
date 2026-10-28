@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"github.com/baby-hero-404/gocore/stderr"
-	"github.com/baby-hero-404/gocore/stdlog"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -17,7 +16,6 @@ func (p *impl) Publish(ctx context.Context, key []byte, value []byte) error {
 	}
 
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {
-		stdlog.WithContext(ctx).Error("kafka publish failed", "error", err.Error())
 		if ctx.Err() != nil {
 			return stderr.Wrap(stderr.CodeTimeout, ctx.Err(), "kafka publish timed out or cancelled")
 		}

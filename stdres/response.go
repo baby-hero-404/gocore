@@ -77,12 +77,24 @@ func FromError(ctx context.Context, err error, translator ...Translator) (Envelo
 		}, stdErr.HTTPStatus()
 	}
 
-	// Unknown / plain Go error: map to 500 Internal Server Error
+	// Unknown / plain Go error: map to 500 Internal Server Error. The raw text may contain driver
+	// messages, hostnames or DSNs, so it is never sent to the client; transports log it instead.
 	return Envelope{
 		Code:      int(stderr.CodeInternal),
-		Message:   err.Error(),
+		Message:   "internal server error",
 		RequestID: requestIDFromContext(ctx),
 	}, http.StatusInternalServerError
+}
+
+// LogUnclassified logs err when it is not a *stderr.Error. FromError hides such errors from the
+// client behind a generic message, so this is the only place their text surfaces. Transport
+// adapters call it before responding.
+func LogUnclassified(ctx context.Context, err error) {
+	var stdErr *stderr.Error
+	if err == nil || errors.As(err, &stdErr) {
+		return
+	}
+	stdlog.WithContext(ctx).Error("unclassified error returned to client as internal server error", "error", err.Error())
 }
 
 func requestIDFromContext(ctx context.Context) string {

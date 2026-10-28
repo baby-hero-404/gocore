@@ -67,7 +67,7 @@ func (v *OAuth2Validator) Validate(ctx context.Context, token string) (Identity,
 	if err != nil {
 		return Identity{}, stderr.Wrap(stderr.CodeUnavailable, err, "failed to reach oauth2 provider")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return Identity{}, stderr.NewUnauthorized(fmt.Sprintf("oauth2 token rejected: status %d", resp.StatusCode)).WithKey(KeyUnauthenticated)

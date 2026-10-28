@@ -26,8 +26,8 @@ func TestAcquire_RedisUnavailable(t *testing.T) {
 	ctx := context.Background()
 	l, err := Acquire(ctx, unreachableClient(t), "k", time.Second, WithTries(2), WithRetryDelay(time.Millisecond))
 	var se *stderr.Error
-	if l != nil || !errors.As(err, &se) || se.Code != stderr.CodeLockHeld {
-		t.Fatalf("got lock=%v err=%v, want LockHeld error", l, err)
+	if l != nil || !errors.As(err, &se) || se.Code != stderr.CodeUnavailable {
+		t.Fatalf("got lock=%v err=%v, want CodeUnavailable (an unreachable Redis is not lock contention)", l, err)
 	}
 }
 

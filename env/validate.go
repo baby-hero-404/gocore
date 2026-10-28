@@ -9,7 +9,7 @@ import (
 )
 
 func validateRequired(val reflect.Value, parentPath string, errorsList *[]stderr.FieldError) {
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return
 		}
@@ -48,7 +48,7 @@ func validateRequired(val reflect.Value, parentPath string, errorsList *[]stderr
 		}
 
 		// Recurse into nested structs
-		if fieldVal.Kind() == reflect.Struct || (fieldVal.Kind() == reflect.Ptr && !fieldVal.IsNil() && fieldVal.Elem().Kind() == reflect.Struct) {
+		if fieldVal.Kind() == reflect.Struct || (fieldVal.Kind() == reflect.Pointer && !fieldVal.IsNil() && fieldVal.Elem().Kind() == reflect.Struct) {
 			validateRequired(fieldVal, fieldPath, errorsList)
 		}
 	}
@@ -81,7 +81,7 @@ func isZeroValue(v reflect.Value) bool {
 		return !v.Bool()
 	case reflect.Slice, reflect.Map:
 		return v.Len() == 0
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		return v.IsNil()
 	default:
 		return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())

@@ -7,11 +7,11 @@ import (
 )
 
 func loadDotEnv(filepath string) error {
-	file, err := os.Open(filepath)
+	file, err := os.Open(filepath) //nolint:gosec // path is operator-supplied configuration
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

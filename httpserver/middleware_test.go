@@ -90,6 +90,7 @@ func TestCORSMiddleware(t *testing.T) {
 	// Preflight OPTIONS request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodOptions, "/cors", nil)
+	req.Header.Set("Origin", "https://example.com")
 	engine.ServeHTTP(w, req)
 
 	if w.Code != http.StatusNoContent {

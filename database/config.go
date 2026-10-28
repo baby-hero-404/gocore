@@ -2,9 +2,10 @@ package database
 
 import "time"
 
-// Config defines connection and pool parameters for PostgreSQL.
+// Config defines connection and pool parameters for relational databases (PostgreSQL, MySQL, SQLite).
 type Config struct {
-	DSN             string        `mapstructure:"dsn" json:"dsn" required:"true"`
+	Driver          string        `mapstructure:"driver" json:"driver"` // "postgres", "mysql", "sqlite"
+	DSN             string        `mapstructure:"dsn" json:"-" required:"true"`
 	MaxOpenConns    int           `mapstructure:"max_open_conns" json:"max_open_conns"`
 	MaxIdleConns    int           `mapstructure:"max_idle_conns" json:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime" json:"conn_max_lifetime"`
@@ -17,6 +18,7 @@ type Config struct {
 // DefaultConfig returns conservative production-ready defaults.
 func DefaultConfig() Config {
 	return Config{
+		Driver:          "postgres",
 		MaxOpenConns:    25,
 		MaxIdleConns:    10,
 		ConnMaxLifetime: 5 * time.Minute,
@@ -30,6 +32,9 @@ func DefaultConfig() Config {
 // applyDefaults fills in zero values with safe defaults.
 func (c *Config) applyDefaults() {
 	def := DefaultConfig()
+	if c.Driver == "" {
+		c.Driver = def.Driver
+	}
 	if c.MaxOpenConns <= 0 {
 		c.MaxOpenConns = def.MaxOpenConns
 	}

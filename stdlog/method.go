@@ -32,18 +32,22 @@ func (l *loggerImpl) Log(ctx context.Context, level slog.Level, msg string, args
 
 // Package-level helpers forwarding to default logger
 
+// Debug logs at debug level using the default logger.
 func Debug(msg string, args ...any) {
 	Get().Debug(msg, args...)
 }
 
+// Info logs at info level using the default logger.
 func Info(msg string, args ...any) {
 	Get().Info(msg, args...)
 }
 
+// Warn logs at warn level using the default logger.
 func Warn(msg string, args ...any) {
 	Get().Warn(msg, args...)
 }
 
+// Error logs at error level using the default logger.
 func Error(msg string, args ...any) {
 	Get().Error(msg, args...)
 }

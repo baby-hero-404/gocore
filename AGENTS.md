@@ -25,6 +25,8 @@ All AI agents writing code or refactoring in this repository **must** strictly a
 * 📦 [dependency-management.md](.agents/rules/dependency-management.md): Always use latest stable versions, zero-bloat policy, standard library first.
 * 🏛️ [architecture.md](.agents/rules/architecture.md): Flat package layout, bottom-up acyclic dependency tree, independent configs.
 * 🧪 [testing.md](.agents/rules/testing.md): Table-driven tests, race detection (`-race`), interface mocking, coverage target.
+* 🧩 [extension.md](.agents/rules/extension.md): Adding packages, generated mocks (mockery), no `main`/demos in the library, scope gate.
+* 🤖 [agent-workflow.md](.agents/rules/agent-workflow.md): How agents work here, definition of done.
 * 🌿 [git-workflow.md](.agents/rules/git-workflow.md): Conventional Commits format and branch/PR workflow.
 
 ---
@@ -40,6 +42,15 @@ make lint
 
 # Tidy and prune Go modules
 make tidy
+
+# Regenerate mocks from .mockery.yml (never hand-edit mock_*.go)
+make mocks
+
+# Full gate: lint (gofmt, vet, golangci-lint) + mocks-check + secrets + tests + coverage ratchet
+make verify
+
+# After intentionally raising coverage
+make test && make cover-baseline
 ```
 
 ---

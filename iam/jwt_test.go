@@ -2,7 +2,9 @@ package iam
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +25,7 @@ func generateTestToken(secret string, sub string, email string, roles []string, 
 }
 
 func TestJWTValidator_ValidToken(t *testing.T) {
-	secret := "my-secret-key-12345"
+	secret := "my-secret-key-12345" // gitleaks:allow (test fixture, not a real secret)
 	validator := NewJWTValidator(JWTConfig{Secret: secret})
 
 	token := generateTestToken(secret, "user-100", "user@example.com", []string{"admin"}, time.Hour)
@@ -45,7 +47,7 @@ func TestJWTValidator_ValidToken(t *testing.T) {
 }
 
 func TestJWTValidator_ExpiredOrInvalidToken(t *testing.T) {
-	secret := "my-secret-key-12345"
+	secret := "my-secret-key-12345" // gitleaks:allow (test fixture, not a real secret)
 	validator := NewJWTValidator(JWTConfig{Secret: secret})
 
 	// Expired token
@@ -70,5 +72,21 @@ func TestJWTValidator_ExpiredOrInvalidToken(t *testing.T) {
 	_, err = validator.Validate(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for empty token, got nil")
+	}
+}
+
+func TestJWTConfig_SecretOmittedFromJSON(t *testing.T) {
+	cfg := JWTConfig{
+		Secret:        "super-secret-jwt-key-xyz", // gitleaks:allow
+		SigningMethod: "HS256",
+		Issuer:        "auth-service",
+	}
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	out := string(b)
+	if strings.Contains(out, "super-secret-jwt-key-xyz") || strings.Contains(out, "secret") {
+		t.Errorf("expected secret to be omitted from JSON, got %s", out)
 	}
 }

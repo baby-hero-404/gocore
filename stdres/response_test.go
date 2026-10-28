@@ -1,10 +1,12 @@
 package stdres
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/baby-hero-404/gocore/stderr"
@@ -79,8 +81,8 @@ func TestFromError_StandardGoError(t *testing.T) {
 	if env.Code != int(stderr.CodeInternal) {
 		t.Errorf("expected code %d, got %d", stderr.CodeInternal, env.Code)
 	}
-	if env.Message != "raw unhandled system failure" {
-		t.Errorf("expected error message to match, got %s", env.Message)
+	if env.Message != "internal server error" {
+		t.Errorf("unclassified error text must not reach the client, got %s", env.Message)
 	}
 }
 
@@ -133,5 +135,52 @@ func TestFromError_KeyArgsAndRequestID(t *testing.T) {
 				t.Errorf("got key=%q args=%d request_id=%q", env.Key, len(env.Args), env.RequestID)
 			}
 		})
+	}
+}
+
+func TestLogUnclassified(t *testing.T) {
+	var buf bytes.Buffer
+	prev := stdlog.Get()
+	stdlog.SetDefault(stdlog.New(stdlog.WithOutput(&buf)))
+	t.Cleanup(func() { stdlog.SetDefault(prev) })
+
+	ctx := stdlog.ContextWithRequestID(context.Background(), "rid-42")
+	tests := []struct {
+		name    string
+		err     error
+		wantLog bool
+	}{
+		{"plain error is logged", errors.New("pq: password authentication failed for user admin"), true},
+		{"wrapped plain error is logged", fmt.Errorf("repo: %w", errors.New("boom")), true},
+		{"classified error is not logged", stderr.NewInternal("db down"), false},
+		{"wrapped classified error is not logged", fmt.Errorf("svc: %w", stderr.NewNotFound("x")), false},
+		{"nil is ignored", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+			LogUnclassified(ctx, tt.err)
+			if got := buf.Len() > 0; got != tt.wantLog {
+				t.Fatalf("logged = %v, want %v (%s)", got, tt.wantLog, buf.String())
+			}
+			if tt.wantLog && !strings.Contains(buf.String(), "rid-42") {
+				t.Errorf("log must carry the request id: %s", buf.String())
+			}
+		})
+	}
+}
+
+func TestFromError_NeverLeaksUnclassifiedText(t *testing.T) {
+	secret := errors.New("dial tcp 10.0.0.5:5432: password=hunter2")
+	env, status := FromError(context.Background(), fmt.Errorf("query failed: %w", secret))
+	if status != http.StatusInternalServerError || strings.Contains(env.Message, "hunter2") || strings.Contains(env.Message, "10.0.0.5") {
+		t.Fatalf("status=%d message=%q must be generic", status, env.Message)
+	}
+}
+
+func TestValidationError_NilErrorDoesNotPanic(t *testing.T) {
+	got := ValidationError(struct{}{}, nil)
+	if got == nil || got.Code != stderr.CodeBadRequest {
+		t.Fatalf("got %+v, want a bad request error", got)
 	}
 }

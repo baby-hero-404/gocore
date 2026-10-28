@@ -16,6 +16,10 @@ import (
 func ValidationError(target any, err error) *stderr.Error {
 	var causes []stderr.FieldError
 
+	if err == nil {
+		return stderr.NewBadRequest("invalid_request_format").WithKey("invalid_request_format")
+	}
+
 	// Case 1: Validator errors
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
@@ -50,7 +54,7 @@ func jsonFieldName(obj any, fieldName string) string {
 		return fieldName
 	}
 	t := reflect.TypeOf(obj)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {

@@ -1,7 +1,9 @@
 package database
 
 import (
+	"context"
 	"errors"
+	"net"
 
 	"github.com/baby-hero-404/gocore/stderr"
 	"gorm.io/gorm"
@@ -23,6 +25,11 @@ func WrapError(err error) error {
 
 	if errors.Is(err, gorm.ErrInvalidTransaction) {
 		return stderr.Wrap(stderr.CodeInternal, err, "invalid database transaction")
+	}
+
+	var netErr net.Error
+	if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &netErr) && netErr.Timeout()) {
+		return stderr.Wrap(stderr.CodeTimeout, err, "database operation timed out")
 	}
 
 	return stderr.Wrap(stderr.CodeDatabaseError, err, "database operation failed")

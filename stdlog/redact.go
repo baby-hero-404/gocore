@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// RedactedPlaceholder replaces the value of sensitive log attributes.
 const RedactedPlaceholder = "[REDACTED]"
 
 var defaultSensitiveKeywords = []string{
@@ -19,11 +20,17 @@ var defaultSensitiveKeywords = []string{
 	"access_token",
 	"refresh_token",
 	"private_key",
+	"passwd",
+	"credential",
+	"cookie",
+	"bearer",
+	"jwt",
+	"session_token",
 }
 
 // IsSensitiveKey returns true if the key contains any sensitive keyword.
 func IsSensitiveKey(key string) bool {
-	lower := strings.ToLower(key)
+	lower := strings.ReplaceAll(strings.ToLower(key), "-", "_") // header style keys: X-Api-Key
 	for _, kw := range defaultSensitiveKeywords {
 		if strings.Contains(lower, kw) {
 			return true
@@ -55,10 +62,12 @@ func NewRedactingHandler(inner slog.Handler) *RedactingHandler {
 	return &RedactingHandler{inner: inner}
 }
 
+// Enabled reports whether the wrapped handler handles level.
 func (h *RedactingHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.inner.Enabled(ctx, level)
 }
 
+// Handle redacts sensitive attributes, then forwards the record to the wrapped handler.
 func (h *RedactingHandler) Handle(ctx context.Context, r slog.Record) error {
 	newRecord := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
 
@@ -70,6 +79,7 @@ func (h *RedactingHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.inner.Handle(ctx, newRecord)
 }
 
+// WithAttrs returns a handler whose attributes are redacted like record attributes.
 func (h *RedactingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	sanitized := make([]slog.Attr, len(attrs))
 	for i, a := range attrs {
@@ -78,6 +88,7 @@ func (h *RedactingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &RedactingHandler{inner: h.inner.WithAttrs(sanitized)}
 }
 
+// WithGroup returns a handler with the given group name applied.
 func (h *RedactingHandler) WithGroup(name string) slog.Handler {
 	return &RedactingHandler{inner: h.inner.WithGroup(name)}
 }

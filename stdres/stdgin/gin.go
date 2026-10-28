@@ -64,7 +64,8 @@ func Error(c *gin.Context, err error) {
 		}
 	}
 
-	env, status := stdres.FromError(c.Request.Context(), err, ctxTranslator)
+	stdres.LogUnclassified(requestContext(c), err)
+	env, status := stdres.FromError(requestContext(c), err, ctxTranslator)
 	c.AbortWithStatusJSON(status, env)
 }
 
@@ -72,7 +73,7 @@ func Error(c *gin.Context, err error) {
 func HandleValidationErrors(c *gin.Context, target any, err error) {
 	stdErr := stdres.ValidationError(target, err)
 	if stdErr.Code == stderr.CodeBadRequest && len(stdErr.Details) == 1 && stdErr.Details[0].Field == "body" {
-		stdlog.WithContext(c.Request.Context()).Warn("binding error", "error", err.Error())
+		stdlog.WithContext(requestContext(c)).Warn("binding error", "error", err.Error())
 	}
 	Error(c, stdErr)
 }

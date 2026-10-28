@@ -85,8 +85,8 @@ func TestLogger_WithContext(t *testing.T) {
 		WithJSON(true),
 	)
 
-	ctx := context.WithValue(context.Background(), "request_id", "req-12345")
-	ctx = context.WithValue(ctx, "trace_id", "trace-67890")
+	ctx := context.WithValue(context.Background(), "request_id", "req-12345") //nolint:staticcheck // legacy string keys are intentionally supported
+	ctx = context.WithValue(ctx, "trace_id", "trace-67890")                   //nolint:staticcheck // legacy string keys are intentionally supported
 
 	logger.WithContext(ctx).Info("processing transaction", "amount", 100)
 
@@ -136,5 +136,24 @@ func TestLogger_ChainingAndPackageLevel(t *testing.T) {
 	Error("error msg")
 	if Get() == nil {
 		t.Error("expected non-nil default logger from Get()")
+	}
+}
+
+func TestIsSensitiveKey(t *testing.T) {
+	tests := []struct {
+		key  string
+		want bool
+	}{
+		{"password", true}, {"db_passwd", true}, {"Authorization", true}, {"X-Api-Key", true}, {"Set-Cookie", true}, {"x-auth-token", true}, {"api_key", true},
+		{"access_token", true}, {"set_cookie", true}, {"cookie", true}, {"bearer", true}, {"jwt", true},
+		{"client_credentials", true}, {"private_key", true}, {"dsn", true},
+		{"user_id", false}, {"latency", false}, {"path", false}, {"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			if got := IsSensitiveKey(tt.key); got != tt.want {
+				t.Errorf("IsSensitiveKey(%q) = %v, want %v", tt.key, got, tt.want)
+			}
+		})
 	}
 }

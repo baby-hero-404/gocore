@@ -13,6 +13,7 @@ As a shared foundation toolkit (chassis library) powering critical services, `go
   go test ./... -race -cover
   ```
 * **Coverage Target**: Minimum 80% test coverage for core packages (`stderr`, `stdlog`, `stdres`, `lock`).
+* **Coverage Ratchet (TEST-3 `[test]`)**: `coverage-baseline.txt` stores each package's coverage. `make verify` (`cover-check`) fails if a package drops more than 0.5 points below its baseline, and a package without a baseline entry must reach 80%. Raise baselines with `make test && make cover-baseline`. Generated `*mock` packages and `internal/` are excluded.
 
 ---
 
@@ -59,6 +60,6 @@ func TestError_Format(t *testing.T) {
 
 * **Narrow Mock Interfaces**: When testing business logic or handlers, only mock narrow interfaces defined locally at the consumption site.
 * **Database / Redis Testing**:
-  * Unit tests: Prefer `sqlmock` or `miniredis` for fast, lightweight in-memory tests without requiring Docker.
+  * Unit tests: use in-memory or in-process fakes that need no Docker: SQLite in memory for GORM code, a small in-process fake server for Redis (`cache/fakeredis_test.go`), and an unexported interface seam over the client for Kafka. A new third-party test dependency (e.g. `miniredis`, `sqlmock`) needs approval first (AGT-5).
   * Integration tests: Tag with `//go:build integration` when testing against real instances (e.g. testcontainers or docker-compose).
 * **Resource Cleanup**: Always use `t.Cleanup()` for tearing down temporary resources instead of scattered inline `defer` statements.

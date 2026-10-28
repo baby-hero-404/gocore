@@ -1,14 +1,21 @@
 package producer
 
 import (
+	"context"
 	"strings"
 
 	"github.com/baby-hero-404/gocore/stderr"
 	"github.com/segmentio/kafka-go"
 )
 
+// writer is the subset of *kafka.Writer the producer uses; it is the test seam for a fake broker.
+type writer interface {
+	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
+	Close() error
+}
+
 type impl struct {
-	writer *kafka.Writer
+	writer writer
 	topic  string
 }
 

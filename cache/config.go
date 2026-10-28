@@ -5,7 +5,7 @@ import "time"
 // Config defines connection parameters for Redis.
 type Config struct {
 	Addr         string        `mapstructure:"addr" json:"addr" required:"true"`
-	Password     string        `mapstructure:"password" json:"password"`
+	Password     string        `mapstructure:"password" json:"-"`
 	DB           int           `mapstructure:"db" json:"db"`
 	DialTimeout  time.Duration `mapstructure:"dial_timeout" json:"dial_timeout"`
 	ReadTimeout  time.Duration `mapstructure:"read_timeout" json:"read_timeout"`

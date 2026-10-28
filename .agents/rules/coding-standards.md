@@ -9,7 +9,8 @@ Go programming standards for the `gocore` repository. All AI agents and develope
 1. **Foundation Library (Microservice Chassis)**: `gocore` is a shared infrastructural toolkit across microservices. Code must be stable, simple, high-performance, and feature clean APIs.
 2. **No Global State**: Never use package-level global variables (`var GlobalDB *gorm.DB`). Do not rely on `init()` functions for implicit resource registration. Always initialize explicitly via constructors: `New*(cfg Config) (*Client, error)`.
 3. **Accept Interfaces, Return Structs**: Accept narrow interfaces in function signatures (when decoupling is required) and return concrete struct pointers for predictable caller usage.
-4. **No Panic**: Never call `panic()` in library code. All operational errors must be returned as `error`.
+4. **No Panic / No Exit (CS-3, CS-6 `[test]`)**: Never call `panic()`, `log.Fatal*` or `os.Exit` in library code. All operational errors must be returned as `error`; only the consuming service's `main` decides to terminate. Enforced by `archtest.TestNoPanicOrExit`.
+5. **No Secrets (SEC-1 `[lint]`)**: Never commit secrets, tokens or credentials (compose files, config, tests). Test fixtures that look like secrets carry `// gitleaks:allow`. Enforced by `make secrets` (gitleaks) locally and in CI.
 
 ---
 
@@ -28,6 +29,7 @@ Go programming standards for the `gocore` repository. All AI agents and develope
 ## 3. Context & Concurrency
 
 * **Always Propagate `context.Context`**: The first parameter of every I/O function (Database, Redis, Kafka, HTTP) must be `ctx context.Context`.
+* **Exemptions (CS-5)**: `Close() error` follows `io.Closer`; constructors and helpers that only do local, non-blocking work (config parsing, `env.Load` reading local files, in-memory policy checks, signing) take no `ctx`. Anything that talks to the network, a database or blocks on I/O takes `ctx` first.
 * **Honor Cancellation & Timeouts**: Always check `ctx.Done()` in loops or background workers.
 * **Goroutine Lifecycle Management**: Never spawn unmanaged goroutines. Ensure explicit termination mechanisms via `sync.WaitGroup`, `errgroup.Group`, or context cancellation to prevent goroutine leaks.
 

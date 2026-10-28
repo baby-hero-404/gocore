@@ -20,12 +20,15 @@ func Handler() gin.HandlerFunc {
 // If recorder is nil, metrics are silently skipped.
 func Middleware(recorder *prom.Recorder) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-
 		if recorder == nil {
+			c.Next()
 			return
 		}
+
+		start := time.Now()
+		recorder.IncrementInFlight()
+		defer recorder.DecrementInFlight()
+		c.Next()
 
 		route := c.FullPath()
 		if route == "" {

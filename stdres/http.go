@@ -43,6 +43,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	if err == nil {
 		return
 	}
+	LogUnclassified(r.Context(), err)
 	env, status := FromError(r.Context(), err)
 	WriteJSON(w, r, status, env)
 }

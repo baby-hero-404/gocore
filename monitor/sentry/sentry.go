@@ -13,7 +13,7 @@ import (
 
 // Config configures Sentry error tracking.
 type Config struct {
-	DSN              string  `mapstructure:"dsn" json:"dsn" required:"true"`
+	DSN              string  `mapstructure:"dsn" json:"-" required:"true"`
 	Environment      string  `mapstructure:"environment" json:"environment"`
 	Release          string  `mapstructure:"release" json:"release"`
 	TracesSampleRate float64 `mapstructure:"traces_sample_rate" json:"traces_sample_rate"`

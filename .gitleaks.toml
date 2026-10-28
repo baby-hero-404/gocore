@@ -1,0 +1,11 @@
+title = "gocore gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "third-party code and generated artifacts are not ours to scan"
+paths = [
+  '''^vendor/''',
+  '''^\.tokensave/''',
+]

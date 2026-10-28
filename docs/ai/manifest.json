@@ -1,0 +1,42 @@
+{
+  "project": "gocore",
+  "lastScanned": "2026-10-28T14:19:42+07:00",
+  "checksums": {
+    "go.mod": "84bdfd110d0d0bdb72980382dddcb068a51f03c669269fe64aabd03e642aa8e8",
+    "Makefile": "bd03a5bde053d64b18123626d49b527eb2ab393755504f8d21256aa9a1aed5d8",
+    "README.md": "82ebc768432547c7079ed408be6534ae3617661c5c3d80488d4a101ccbc21f0d",
+    "AGENTS.md": "c6d44ed4a43714d668c2d45bdcf6322cd34c301d2d678dde4567bb041f9f1ea8",
+    "CLAUDE.md": "dbe9ccaaac671cbf03bd4f4956218823258dda9e3eff2b8b7504cbcdc12b04fe",
+    ".agents/rules/architecture.md": "09312541b0e10f55242bc11485ded333e85fef5560b7e9122b8e1ea96e2ef2a4",
+    ".agents/rules/coding-standards.md": "5d7e6b7a97e95cc72dfa7fcad372fd65d50bb188c00cec235fe3164a2632b49a",
+    ".agents/rules/dependency-management.md": "608b61b9fa71bc538c19f7e0b7aa45fd9b81e0309fec5f410c1c6d24dc0aa473",
+    ".agents/rules/git-workflow.md": "6d302195866ee46f7dc01b7936226085844fc1679cebb2ba2da8134ec8db478b",
+    ".agents/rules/testing.md": "7e643bebde6c08c75d7437b16e4086f3b102e3c55f859aa07cb08f6f902463eb",
+    ".agents/rules/extension.md": "b66aa3ab9a9539561930d28ac3c9d2b6f1b7532d6e2e9d8491b0578577712549",
+    ".mockery.yml": "6d92f92f21764ca89b33609671234fd13111eb40d0b39062ad51d194d2cf0ba3",
+    ".gitleaks.toml": "2970173df09df76fbf2b7036e0eef6dc0e2fc5a909f8d3df039746246e9639f4",
+    ".agents/rules/agent-workflow.md": "0335e3484e38cc8643654e1c14d1aabfe24133ecbd5e1a087cb15290e8a622e7",
+    ".golangci.yml": "b6340d21536ae2d1e403bcd5c4b1fb2b88643bbed8a01eaaf9d8e792d0cea1d9",
+    ".github/workflows/verify.yml": "30b3bfc0b6d3d395c0e2b42bcb1ceb9744d4646e7778a5e3f8d9321ed40ec8f5",
+    "coverage-baseline.txt": "4860cf4180dce22070551743a7fc9c37dfa123627a69a88d85d04d0908d9524e"
+  },
+  "autoRefreshTriggers": [
+    "go.mod",
+    "Makefile",
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".agents/rules/architecture.md",
+    ".agents/rules/coding-standards.md",
+    ".agents/rules/dependency-management.md",
+    ".agents/rules/git-workflow.md",
+    ".agents/rules/testing.md",
+    ".agents/rules/extension.md",
+    ".mockery.yml",
+    ".gitleaks.toml",
+    ".agents/rules/agent-workflow.md",
+    ".golangci.yml",
+    ".github/workflows/verify.yml",
+    "coverage-baseline.txt"
+  ]
+}
